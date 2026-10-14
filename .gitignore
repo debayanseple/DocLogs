@@ -1,0 +1,40 @@
+# Logs
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+node_modules
+dist
+dist-ssr
+*.local
+
+# Secrets — never commit. Copy .env.example to .env and fill in locally.
+.env
+.env.*
+!.env.example
+supabase/.temp
+
+# Internal source docs (kept on disk, not in the repo)
+ClinicaLog_OMFS_MVP_PRD.md
+ClinicaLog_OMFS_OpenCode_Build_Prompt.md
+
+# Agent tooling installed via `npx skills add` — re-installable, not project code
+.agents/
+agent/
+.claude/
+skills-lock.json
+
+# Editor directories and files
+.vscode/*
+!.vscode/extensions.json
+.idea
+.DS_Store
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
