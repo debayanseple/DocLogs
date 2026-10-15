@@ -44,6 +44,9 @@ export interface Patient {
   notes?: string
   allergies?: string
   medicalHistory?: string
+  chiefComplaint?: string
+  referredBy?: string
+  testsAvailable?: string[]
   createdAt: string
   updatedAt: string
 }

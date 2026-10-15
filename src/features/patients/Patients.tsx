@@ -9,7 +9,8 @@ import { FilterChip } from '../../components/ui/FilterChip'
 import { Badge, StatusBadge } from '../../components/ui/Badge'
 import { formatDate, calculateAge } from '../../utils/dates'
 import { Modal } from '../../components/ui/Modal'
-import { PatientForm } from './PatientForm'
+import { PatientForm, TEST_OPTIONS } from './PatientForm'
+import { OtForm } from '../ot/OtForm'
 import { exportToCsv } from '../../utils/csv'
 import {
   SkeletonPage,
@@ -26,6 +27,7 @@ export function Patients() {
   const [facility, setFacility] = useState('all')
   const [page, setPage] = useState(1)
   const [showAdd, setShowAdd] = useState(false)
+  const [showAddOt, setShowAddOt] = useState(false)
   const [editing, setEditing] = useState<Patient | null>(null)
   const [menuOpen, setMenuOpen] = useState(false)
   const [importMsg, setImportMsg] = useState<string | null>(null)
@@ -89,8 +91,8 @@ export function Patients() {
   const facilityMap = new Map(data.facilities.map((f) => [f.id, f]))
 
   const handleExport = () => {
-    const rows = filtered.map((p) => [p.patientNumber, p.name, p.dob ?? '', p.sex, p.phone, facilityMap.get(p.primaryFacilityId ?? '')?.name ?? '', getSource(p.id).join('+'), lastVisitMap.get(p.id) ? formatDate(lastVisitMap.get(p.id)) : '—', p.status])
-    exportToCsv(`patients-${new Date().toISOString().slice(0, 10)}.csv`, ['Patient ID', 'Name', 'DOB', 'Sex', 'Phone', 'Facility', 'Source', 'Last visit', 'Status'], rows)
+    const rows = filtered.map((p) => [p.patientNumber, p.name, p.dob ?? '', p.sex, p.phone, facilityMap.get(p.primaryFacilityId ?? '')?.name ?? '', getSource(p.id).join('+'), p.chiefComplaint ?? '', p.referredBy ?? '', (p.testsAvailable ?? []).join('; '), lastVisitMap.get(p.id) ? formatDate(lastVisitMap.get(p.id)) : '—', p.status])
+    exportToCsv(`patients-${new Date().toISOString().slice(0, 10)}.csv`, ['Patient ID', 'Name', 'DOB', 'Sex', 'Phone', 'Facility', 'Source', 'Chief complaint', 'Referred by', 'Tests available', 'Last visit', 'Status'], rows)
     setMenuOpen(false)
   }
 
@@ -128,6 +130,17 @@ export function Patients() {
       const iAge = idx('age')
       const iSex = idx('sex')
       const iFac = idx('facility')
+      const iChief = idx('chief')
+      const iRef = header.findIndex((h) => h.includes('refer'))
+      const iTests = header.findIndex((h) => h.includes('test'))
+      const matchTests = (cell: string): string[] | undefined => {
+        const wanted = cell.split(/[;|,]/).map((t) => t.trim().toLowerCase()).filter(Boolean)
+        if (!wanted.length) return undefined
+        const matched = TEST_OPTIONS.filter((opt) =>
+          wanted.some((w) => opt.toLowerCase().includes(w) || w.includes(opt.toLowerCase().split(' (')[0])),
+        )
+        return matched.length ? matched : undefined
+      }
       let added = 0
       for (const r of rows.slice(1)) {
         const name = (r[iName] ?? '').trim()
@@ -145,6 +158,9 @@ export function Patients() {
           registrationDate: new Date().toISOString().slice(0, 10),
           primaryFacilityId: fac?.id ?? data.facilities.find((f) => f.status === 'Active')?.id,
           status: 'Active',
+          chiefComplaint: iChief >= 0 ? (r[iChief] ?? '').trim() || undefined : undefined,
+          referredBy: iRef >= 0 ? (r[iRef] ?? '').trim() || undefined : undefined,
+          testsAvailable: iTests >= 0 ? matchTests(r[iTests] ?? '') || undefined : undefined,
         })
         added++
       }
@@ -182,16 +198,23 @@ export function Patients() {
 
   return (
     <div className="space-y-4">
-      {/* Count + primary action */}
+      {/* Count + actions */}
       <div className="flex items-center justify-between gap-3">
         <p className="text-sm text-slate-500">
           {filtered.length} of {data.patients.length} patients
         </p>
-        <Button variant="primary" onClick={() => setShowAdd(true)} className="shrink-0">
-          <Plus className="w-4 h-4" />
-          <span className="hidden sm:inline">Add patient</span>
-          <span className="sm:hidden">Add</span>
-        </Button>
+        <div className="flex items-center gap-1.5 shrink-0">
+          <Button variant="primary" onClick={() => setShowAdd(true)}>
+            <Plus className="w-4 h-4" />
+            <span className="hidden sm:inline">Add patient</span>
+            <span className="sm:hidden">Patient</span>
+          </Button>
+          <Button variant="secondary" onClick={() => setShowAddOt(true)}>
+            <Plus className="w-4 h-4" />
+            <span className="hidden sm:inline">Add OT</span>
+            <span className="sm:hidden">OT</span>
+          </Button>
+        </div>
       </div>
 
       <Card className="!p-3">
@@ -360,6 +383,9 @@ export function Patients() {
 
       <Modal open={showAdd} onClose={() => setShowAdd(false)} title="Add patient">
         <PatientForm onClose={() => setShowAdd(false)} />
+      </Modal>
+      <Modal open={showAddOt} onClose={() => setShowAddOt(false)} title="Add OT" widthClass="max-w-3xl">
+        <OtForm onClose={() => setShowAddOt(false)} />
       </Modal>
       <Modal open={!!editing} onClose={() => setEditing(null)} title="Edit patient">
         {editing && <PatientForm patient={editing} onClose={() => setEditing(null)} />}

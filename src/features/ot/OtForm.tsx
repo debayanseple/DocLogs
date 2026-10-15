@@ -8,7 +8,7 @@ import { ChevronDown } from 'lucide-react'
 import type { OperationRecord } from '../../types'
 
 export function OtForm({ patientId: fixedPatientId, op, onClose }: { patientId?: string; op?: OperationRecord; onClose: () => void }) {
-  const { data, addOperation, updateOperation } = useData()
+  const { data, addOperation, updateOperation, addPatient } = useData()
   const { canFinalise } = useRole()
   const { profileName } = useAuth()
   const [form, setForm] = useState<Partial<OperationRecord>>(
@@ -22,6 +22,11 @@ export function OtForm({ patientId: fixedPatientId, op, onClose }: { patientId?:
       status: 'Draft',
     }
   )
+  // Standalone entry (no fixed patient): doctor can log an OT for a brand-new
+  // patient inline, without a separate Add Patient step first.
+  const [patientMode, setPatientMode] = useState<'existing' | 'new'>(fixedPatientId ? 'existing' : 'new')
+  const [newName, setNewName] = useState('')
+  const [newPhone, setNewPhone] = useState('')
   const [showMore, setShowMore] = useState(!!op?.findings)
   const [errors, setErrors] = useState<Record<string, string>>({})
   const isFinalised = op?.status === 'Finalised'
@@ -30,6 +35,8 @@ export function OtForm({ patientId: fixedPatientId, op, onClose }: { patientId?:
     const e: Record<string, string> = {}
     if (!form.procedures?.[0]?.name?.trim()) e.procedures = 'Procedure name required'
     if (!form.operationDate) e.operationDate = 'Date required'
+    if (!fixedPatientId && patientMode === 'new' && !newName.trim()) e.newName = 'Patient name required'
+    if (!fixedPatientId && patientMode === 'existing' && !form.patientId) e.patientId = 'Select patient'
     setErrors(e)
     return Object.keys(e).length === 0
   }
@@ -38,9 +45,23 @@ export function OtForm({ patientId: fixedPatientId, op, onClose }: { patientId?:
     if (!validate()) return
     if (isFinalised && !canFinalise) return
     if (op) updateOperation(op.id, { ...form, status } as Partial<OperationRecord>)
-    else
+    else {
+      // Inline patient: same submit creates the patient first, then the OT
+      // linked to it — one tap, no separate registration step.
+      let pid = form.patientId!
+      if (!fixedPatientId && patientMode === 'new') {
+        const np = addPatient({
+          name: newName.trim(),
+          phone: newPhone.trim() || undefined,
+          sex: 'Not recorded',
+          registrationDate: new Date().toISOString().split('T')[0],
+          primaryFacilityId: form.facilityId,
+          status: 'Active',
+        })
+        pid = np.id
+      }
       addOperation({
-        patientId: form.patientId!,
+        patientId: pid,
         facilityId: form.facilityId!,
         operationDate: form.operationDate!,
         preOpDiagnosis: form.preOpDiagnosis || form.procedures![0].name,
@@ -50,18 +71,45 @@ export function OtForm({ patientId: fixedPatientId, op, onClose }: { patientId?:
         status: status as OperationRecord['status'],
         createdBy: 'Surgeon',
       } as never)
+    }
     onClose()
   }
 
   return (
     <form onSubmit={(e) => e.preventDefault()} className="space-y-4">
-      {!fixedPatientId && (
-        <Field label="Patient" required>
+      {!fixedPatientId && !op && (
+        <div className="grid grid-cols-2 gap-1.5 p-1 rounded-xl bg-white/45 backdrop-blur-md border border-white/70">
+          {(['new', 'existing'] as const).map((m) => (
+            <button
+              key={m}
+              type="button"
+              onClick={() => setPatientMode(m)}
+              className={`h-8 rounded-lg text-xs font-medium transition-colors ${
+                patientMode === m ? 'bg-[#162a4d] text-white' : 'text-slate-600 hover:bg-white/60'
+              }`}
+            >
+              {m === 'new' ? 'New patient' : 'Existing patient'}
+            </button>
+          ))}
+        </div>
+      )}
+      {!fixedPatientId && patientMode === 'existing' && (
+        <Field label="Patient" required error={errors.patientId}>
           <Select value={form.patientId ?? ''} onChange={(e) => setForm({ ...form, patientId: e.target.value })}>
             <option value="">Select patient</option>
             {data.patients.map((p) => <option key={p.id} value={p.id}>{p.patientNumber} — {p.name}</option>)}
           </Select>
         </Field>
+      )}
+      {!fixedPatientId && !op && patientMode === 'new' && (
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <Field label="Patient name" required error={errors.newName}>
+            <Input value={newName} onChange={(e) => setNewName(e.target.value)} placeholder="e.g. Rahul Mukherjee" />
+          </Field>
+          <Field label="Phone (optional)">
+            <Input value={newPhone} onChange={(e) => setNewPhone(e.target.value)} placeholder="98765 43210" inputMode="numeric" />
+          </Field>
+        </div>
       )}
       <div className="bg-indigo-100/40 backdrop-blur-md border border-indigo-200/50 rounded-xl p-4 space-y-3">
         <div className="text-xs font-semibold tracking-widest text-indigo-700">OT IN 30 SECONDS</div>

@@ -236,6 +236,18 @@ export function PatientDetails() {
                 <div><span className="text-slate-500">Allergies:</span> <span className={patient.allergies?.toLowerCase().includes('penicillin') ? 'text-red-600 font-medium' : ''}>{patient.allergies ?? '—'}</span></div>
                 <div><span className="text-slate-500">Emergency:</span> {patient.emergencyContact ?? '—'}</div>
                 <div><span className="text-slate-500">Medical history:</span> {patient.medicalHistory ?? '—'}</div>
+                <div><span className="text-slate-500">Chief complaint:</span> {patient.chiefComplaint ?? '—'}</div>
+                <div><span className="text-slate-500">Referred by:</span> {patient.referredBy ?? '—'}</div>
+                <div>
+                  <span className="text-slate-500">Reports available:</span>{' '}
+                  {patient.testsAvailable?.length ? (
+                    <span className="inline-flex flex-wrap gap-1 mt-1">
+                      {patient.testsAvailable.map((t) => (
+                        <Badge key={t} variant="neutral">{t}</Badge>
+                      ))}
+                    </span>
+                  ) : '—'}
+                </div>
               </div>
             </Card>
           </div>

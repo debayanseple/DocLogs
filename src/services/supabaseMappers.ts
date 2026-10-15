@@ -20,6 +20,9 @@ export function mapPatientToDb(p: Partial<Patient> & { workspace_id: string; pat
     notes: p.notes ?? null,
     allergies: p.allergies ?? null,
     medical_history: p.medicalHistory ?? null,
+    chief_complaint: p.chiefComplaint ?? null,
+    referred_by: p.referredBy ?? null,
+    tests_available: p.testsAvailable ?? [],
   }
 }
 export function mapPatientFromDb(r: Record<string, unknown>): Patient {
@@ -40,6 +43,9 @@ export function mapPatientFromDb(r: Record<string, unknown>): Patient {
     notes: (r.notes as string) ?? undefined,
     allergies: (r.allergies as string) ?? undefined,
     medicalHistory: (r.medical_history as string) ?? undefined,
+    chiefComplaint: (r.chief_complaint as string) ?? undefined,
+    referredBy: (r.referred_by as string) ?? undefined,
+    testsAvailable: Array.isArray(r.tests_available) ? (r.tests_available as string[]) : undefined,
     createdAt: r.created_at as string,
     updatedAt: r.updated_at as string,
   }

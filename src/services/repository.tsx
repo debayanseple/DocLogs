@@ -60,8 +60,17 @@ function persist(data: StoreData) {
   } catch {}
 }
 
-function genId(prefix: string) {
-  return `${prefix}${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`
+// Client-generated UUIDs so a record keeps the SAME id locally and in
+// Supabase. That lets one submit create a patient + a linked OT without the
+// OT pointing at a throwaway local id (Supabase uuid columns reject those).
+function genId(_prefix: string) {
+  if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
+    return crypto.randomUUID()
+  }
+  // Fallback for non-secure contexts: random UUIDv4
+  const r = () =>
+    Math.floor((1 + Math.random()) * 0x10000).toString(16).slice(1)
+  return `${r().slice(0, 4)}${r()}-${r()}-4${r().slice(1)}-8${r().slice(1)}-${r()}${r()}${r()}`.slice(0, 36)
 }
 
 function nextPatientNumber(patients: Patient[]): string {
@@ -295,22 +304,35 @@ export function DataProvider({ children }: { children: ReactNode }) {
     setTimeout(() => addAudit({ recordId: patient.id, recordType: 'Patient', action: 'Created', userId: user?.id ?? 'current', userName: user?.email ?? 'Current User', details: patient.name }), 0)
 
     if (usingSupabase && supabase && workspaceId) {
-      // fire supabase insert (id will be overwritten by DB uuid, but we keep optimistic)
+      // insert with the SAME client-generated uuid, so linked records created
+      // in the same flow (e.g. an OT) reference a valid, stable id
       const dbRow = mapPatientToDb({ ...patient, workspace_id: workspaceId, patient_number: patient.patientNumber } as never)
-      // remove id to let DB generate uuid, but keep optimistic id for now; we update after
-      const { id: _id, ...rest } = dbRow as Record<string, unknown>
-      supabase
-        .from('patients')
-        .insert(rest as never)
-        .select('*')
-        .single()
-        .then(({ data: row, error }) => {
-          if (!error && row) {
-            const mapped = mapPatientFromDb(row as Record<string, unknown>)
-            // replace optimistic with real DB row (real uuid)
-            setData((prev) => ({ ...prev, patients: prev.patients.map((x) => (x.id === patient.id ? mapped : x)) }))
-          } else if (error) console.error('addPatient supabase error', error)
-        })
+      const { ...rest } = dbRow as Record<string, unknown>
+      const sb = supabase
+      const insertPatient = (payload: Record<string, unknown>, withoutIntake = false): void => {
+        sb
+          .from('patients')
+          .insert(payload as never)
+          .select('*')
+          .single()
+          .then(({ data: row, error }) => {
+            if (!error && row) {
+              const mapped = mapPatientFromDb(row as Record<string, unknown>)
+              // replace optimistic with real DB row (real uuid)
+              setData((prev) => ({ ...prev, patients: prev.patients.map((x) => (x.id === patient.id ? mapped : x)) }))
+            } else if (
+              error &&
+              !withoutIntake &&
+              /chief_complaint|referred_by|tests_available|column/i.test(error.message ?? '')
+            ) {
+              // intake columns not migrated yet — retry without them so the
+              // patient is still saved; run the migration to keep these fields
+              const { chief_complaint: _cc, referred_by: _rb, tests_available: _ta, ...legacy } = payload
+              insertPatient(legacy, true)
+            } else if (error) console.error('addPatient supabase error', error)
+          })
+      }
+      insertPatient(rest)
     }
     return patient
   }
@@ -332,6 +354,9 @@ export function DataProvider({ children }: { children: ReactNode }) {
       if (patch.notes !== undefined) dbPatch.notes = patch.notes
       if (patch.allergies !== undefined) dbPatch.allergies = patch.allergies
       if (patch.medicalHistory !== undefined) dbPatch.medical_history = patch.medicalHistory
+      if (patch.chiefComplaint !== undefined) dbPatch.chief_complaint = patch.chiefComplaint || null
+      if (patch.referredBy !== undefined) dbPatch.referred_by = patch.referredBy || null
+      if (patch.testsAvailable !== undefined) dbPatch.tests_available = patch.testsAvailable ?? []
       supabase.from('patients').update(dbPatch as never).eq('id', id).then(({ error }) => { if (error) console.error(error) })
     }
   }
@@ -427,10 +452,10 @@ export function DataProvider({ children }: { children: ReactNode }) {
     setData((prev) => ({ ...prev, operations: [rec, ...prev.operations] }))
     if (usingSupabase && supabase && workspaceId) {
       const dbRow = mapOtToDb({ ...rec, workspace_id: workspaceId })
-      const { id: _id, ...rest } = dbRow as Record<string, unknown>
+      const { ...rest } = dbRow as Record<string, unknown>
       supabase.from('ot_records').insert(rest as never).select('*').single().then(async ({ data: row, error }) => {
         if (!error && row) {
-          const newId = (row as Record<string, unknown>).id as string
+          const newId = ((row as Record<string, unknown>).id as string) || rec.id
           // insert child tables
           if (rec.procedures.length) {
             await supabase!.from('ot_procedures').insert(rec.procedures.map((p) => ({ ot_record_id: newId, procedure_name: p.name, site: p.site ?? null, laterality: p.laterality ?? null, details: p.details ?? null } as never)))

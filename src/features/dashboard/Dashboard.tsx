@@ -1,15 +1,19 @@
-import { Users, Stethoscope, FileText, Scissors, CalendarClock, AlertTriangle, ArrowRight, Plus } from 'lucide-react'
+import { useState } from 'react'
+import { Users, Stethoscope, FileText, Scissors, CalendarClock, AlertTriangle, ArrowRight } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import { useData } from '../../services/repository'
 import { Card, CardHeader } from '../../components/ui/Card'
 import { StatusBadge } from '../../components/ui/Badge'
 import { Button } from '../../components/ui/Button'
 import { formatDate } from '../../utils/dates'
+import { Modal } from '../../components/ui/Modal'
+import { PatientForm } from '../patients/PatientForm'
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts'
 import { SkeletonPage, SkeletonStat, SkeletonCard, Skeleton } from '../../components/ui/Skeleton'
 
 export function Dashboard() {
   const { data, ready } = useData()
+  const [showAdd, setShowAdd] = useState(false)
 
   const totalPatients = data.patients.length
   const opdThisMonth = data.opdVisits.filter((v) => {
@@ -93,9 +97,8 @@ export function Dashboard() {
     <div className="space-y-6">
       {/* quick actions — Patients is now the single list (all merged) */}
       <div className="flex flex-wrap gap-2">
-        <Link to="/patients"><Button variant="primary"><Plus className="w-4 h-4" /> New patient</Button></Link>
-        <Link to="/patients"><Button variant="outline"><Plus className="w-4 h-4" /> All patients</Button></Link>
-        <Link to="/follow-ups"><Button variant="outline">View follow-ups <ArrowRight className="w-4 h-4" /></Button></Link>
+        <Button variant="primary" onClick={() => setShowAdd(true)}><Users className="w-4 h-4" /> Add patient</Button>
+        <Link to="/follow-ups"><Button variant="outline">Follow-ups <ArrowRight className="w-4 h-4" /></Button></Link>
       </div>
 
       {/* stats */}
@@ -243,6 +246,10 @@ export function Dashboard() {
           </div>
         </Card>
       </div>
+
+      <Modal open={showAdd} onClose={() => setShowAdd(false)} title="Add patient">
+        <PatientForm onClose={() => setShowAdd(false)} />
+      </Modal>
     </div>
   )
 }
