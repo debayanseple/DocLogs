@@ -5,10 +5,10 @@ import { useAuth } from '../../services/auth'
 import { Button } from '../../components/ui/Button'
 import { Input, Select, Field } from '../../components/ui/Input'
 import { ChevronDown } from 'lucide-react'
-import type { OperationRecord } from '../../types'
+import type { FollowUp, OperationRecord } from '../../types'
 
 export function OtForm({ patientId: fixedPatientId, op, onClose }: { patientId?: string; op?: OperationRecord; onClose: () => void }) {
-  const { data, addOperation, updateOperation, addPatient } = useData()
+  const { data, addOperation, updateOperation, addPatient, addFollowUp } = useData()
   const { canFinalise } = useRole()
   const { profileName } = useAuth()
   const [form, setForm] = useState<Partial<OperationRecord>>(
@@ -28,8 +28,27 @@ export function OtForm({ patientId: fixedPatientId, op, onClose }: { patientId?:
   const [newName, setNewName] = useState('')
   const [newPhone, setNewPhone] = useState('')
   const [showMore, setShowMore] = useState(!!op?.findings)
+  const [reviewDate, setReviewDate] = useState(op?.followUpDate ?? '')
   const [errors, setErrors] = useState<Record<string, string>>({})
   const isFinalised = op?.status === 'Finalised'
+
+  // Review date → auto follow-up, linked back to this OT
+  const createReviewFollowUp = (pid: string, otId: string, procName: string) => {
+    if (!reviewDate) return
+    const today = new Date().toISOString().slice(0, 10)
+    const status: FollowUp['status'] =
+      reviewDate < today ? 'Overdue' : reviewDate === today ? 'Due' : 'Upcoming'
+    addFollowUp({
+      patientId: pid,
+      dueDate: reviewDate,
+      reason: `Post-op review — ${procName}`,
+      facilityId: form.facilityId,
+      assignedTo: form.primarySurgeon,
+      status,
+      relatedId: otId,
+      relatedType: 'OT',
+    })
+  }
 
   const validate = () => {
     const e: Record<string, string> = {}
@@ -44,8 +63,14 @@ export function OtForm({ patientId: fixedPatientId, op, onClose }: { patientId?:
   const handleSubmit = (status: OperationRecord['status']) => {
     if (!validate()) return
     if (isFinalised && !canFinalise) return
-    if (op) updateOperation(op.id, { ...form, status } as Partial<OperationRecord>)
-    else {
+    if (op) {
+      updateOperation(op.id, { ...form, status, followUpDate: reviewDate || undefined } as Partial<OperationRecord>)
+      // Review date added on edit → create the follow-up only if this OT
+      // doesn't already have one linked, so edits never duplicate it.
+      if (reviewDate && !data.followUps.some((f) => f.relatedId === op.id)) {
+        createReviewFollowUp(op.patientId, op.id, op.procedures[0]?.name ?? 'Operation')
+      }
+    } else {
       // Inline patient: same submit creates the patient first, then the OT
       // linked to it — one tap, no separate registration step.
       let pid = form.patientId!
@@ -60,17 +85,20 @@ export function OtForm({ patientId: fixedPatientId, op, onClose }: { patientId?:
         })
         pid = np.id
       }
-      addOperation({
+      const procName = form.procedures![0].name
+      const rec = addOperation({
         patientId: pid,
         facilityId: form.facilityId!,
         operationDate: form.operationDate!,
-        preOpDiagnosis: form.preOpDiagnosis || form.procedures![0].name,
-        postOpDiagnosis: form.postOpDiagnosis || form.preOpDiagnosis || form.procedures![0].name,
+        preOpDiagnosis: form.preOpDiagnosis || procName,
+        postOpDiagnosis: form.postOpDiagnosis || form.preOpDiagnosis || procName,
         procedures: form.procedures!.filter((p) => p.name.trim()),
         primarySurgeon: form.primarySurgeon!,
+        followUpDate: reviewDate || undefined,
         status: status as OperationRecord['status'],
         createdBy: 'Surgeon',
       } as never)
+      createReviewFollowUp(pid, rec.id, procName)
     }
     onClose()
   }
@@ -133,6 +161,9 @@ export function OtForm({ patientId: fixedPatientId, op, onClose }: { patientId?:
         <div className="space-y-3 glass-subtle rounded-xl p-4">
           <Field label="Findings"><Input value={form.findings ?? ''} onChange={(e) => setForm({ ...form, findings: e.target.value })} placeholder="Optional" /></Field>
           <Field label="Post-op plan"><Input value={form.plan ?? ''} onChange={(e) => setForm({ ...form, plan: e.target.value })} placeholder="NG feed, antibiotics, suture removal…" /></Field>
+          <Field label="Review date" hint="Creates a follow-up automatically">
+            <Input type="date" value={reviewDate} onChange={(e) => setReviewDate(e.target.value)} />
+          </Field>
         </div>
       )}
 
