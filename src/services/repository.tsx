@@ -113,6 +113,7 @@ interface DataContextValue {
   updateFollowUp: (id: string, patch: Partial<FollowUp>) => void
   addAudit: (a: Omit<AuditEvent, 'id' | 'timestamp'>) => void
   resetDemo: () => void
+  clearPatients: () => void
   findDuplicates: (name: string, dob?: string, phone?: string, excludeId?: string) => Patient[]
   refresh: () => Promise<void>
   addAssistant: (email: string, fullName: string) => Promise<{ error: string | null }>
@@ -554,6 +555,11 @@ export function DataProvider({ children }: { children: ReactNode }) {
     // do not wipe Supabase; supabase reset requires manual SQL
   }
 
+  /** Empty the patient list (keeps visits/records). Persists locally. */
+  const clearPatients = () => {
+    setData((prev) => ({ ...prev, patients: [] }))
+  }
+
   const findDuplicates: DataContextValue['findDuplicates'] = (name, dob, phone, excludeId) => {
     const n = name.trim().toLowerCase()
     return data.patients.filter((p) => {
@@ -600,6 +606,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
     updateFollowUp,
     addAudit,
     resetDemo,
+    clearPatients,
     findDuplicates,
     refresh,
     addAssistant,

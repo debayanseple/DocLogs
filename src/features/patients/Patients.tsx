@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { Search, Plus, Download, Upload, Edit2, Eye, MoreVertical } from 'lucide-react'
+import { Search, Plus, Download, Upload, Edit2, Eye, MoreVertical, Trash2 } from 'lucide-react'
 import { useData } from '../../services/repository'
 import { Card } from '../../components/ui/Card'
 import { Button } from '../../components/ui/Button'
@@ -22,7 +22,7 @@ import {
 import type { Patient } from '../../types'
 
 export function Patients() {
-  const { data, addPatient, ready } = useData()
+  const { data, addPatient, clearPatients, ready } = useData()
   const [q, setQ] = useState('')
   const [facility, setFacility] = useState('all')
   const [page, setPage] = useState(1)
@@ -273,6 +273,18 @@ export function Patients() {
                 <div className="px-3.5 py-1.5 text-[11px] text-slate-400 border-t border-white/60 mt-1">
                   Import expects a CSV with a Name column
                 </div>
+                <button
+                  onClick={() => {
+                    if (data.patients.length === 0) { setMenuOpen(false); return }
+                    if (!confirm(`Remove all ${data.patients.length} patients from the list? Their visits and records will be kept.`)) return
+                    clearPatients()
+                    setMenuOpen(false)
+                    setImportMsg('Patient list cleared.')
+                  }}
+                  className="w-full flex items-center gap-2.5 px-3.5 py-2 text-sm text-red-600 hover:bg-red-50 rounded-xl mx-1"
+                >
+                  <Trash2 className="w-4 h-4" /> Clear patient list
+                </button>
               </div>
             )}
           </div>
