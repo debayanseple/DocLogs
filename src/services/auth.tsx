@@ -38,12 +38,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [])
 
   const signIn: AuthCtx['signIn'] = async (email, password) => {
-    if (!supabase) return { error: 'Supabase not configured' }
+    if (!supabase) return { error: 'Sign-in is currently unavailable. Please try again later.' }
     const { error } = await supabase.auth.signInWithPassword({ email, password })
     return { error: error?.message ?? null }
   }
   const signUp: AuthCtx['signUp'] = async (email, password, fullName) => {
-    if (!supabase) return { error: 'Supabase not configured' }
+    if (!supabase) return { error: 'Sign-up is currently unavailable. Please try again later.' }
     const { error } = await supabase.auth.signUp({
       email,
       password,

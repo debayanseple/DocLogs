@@ -366,8 +366,8 @@ export function PatientDetails() {
       )}
       {tab === 'documents' && (
         <Card>
-          <CardHeader title="Documents" subtitle="References only — no real uploads in prototype" />
-          <div className="text-sm text-slate-500 py-8 text-center border-2 border-dashed border-white/80 rounded-xl">Document references appear here. Real deployment requires private object storage with short-lived authorised links.</div>
+          <CardHeader title="Documents" subtitle="References only" />
+          <div className="text-sm text-slate-500 py-8 text-center border-2 border-dashed border-white/80 rounded-xl">Document references appear here.</div>
         </Card>
       )}
       {tab === 'activity' && (
@@ -393,7 +393,7 @@ export function PatientDetails() {
               const relatedIds = [patient.id, ...data.opdVisits.filter((v) => v.patientId === patient.id).map((v) => v.id)]
               return relatedIds.includes(a.recordId)
             }).length === 0 && <div className="text-slate-500 py-4 text-center">No activity yet. Amendments to finalised records will appear here.</div>}
-            <div className="text-xs text-slate-500 mt-4 bg-amber-100/50 backdrop-blur-md border border-amber-200/60 rounded-lg p-3">Finalised records preserve history — amendments create a new version with reason and do not silently overwrite. This prototype simulates the UI; production requires server-side audit logs.</div>
+            <div className="text-xs text-slate-500 mt-4 bg-amber-100/50 backdrop-blur-md border border-amber-200/60 rounded-lg p-3">Finalised records preserve history — amendments create a new version with reason and do not silently overwrite.</div>
           </div>
         </Card>
       )}

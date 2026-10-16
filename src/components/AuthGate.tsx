@@ -13,7 +13,7 @@ export function AuthGate({ children }: { children: React.ReactNode }) {
   const [msg, setMsg] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
 
-  // If Supabase not configured, fall back to demo mode (existing role switcher)
+  // If backend is not configured, fall back to local mode
   if (!isConfigured) return <>{children}</>
   if (loading)
     return (
@@ -53,7 +53,7 @@ export function AuthGate({ children }: { children: React.ReactNode }) {
       <Card className="w-full max-w-md" strong>
         <h1 className="text-xl font-bold text-slate-900">ClinicaLog — {mode === 'signin' ? 'Sign in' : 'Create account'}</h1>
         <p className="text-sm text-slate-500 mt-1">
-          {mode === 'signin' ? 'Sign in to your private workspace.' : 'Create your workspace. Your name is stored in your profile (auth metadata).'}
+          {mode === 'signin' ? 'Sign in to your private workspace.' : 'Create your workspace. Your name is stored in your profile.'}
         </p>
         <form onSubmit={handle} className="mt-6 space-y-4">
           {mode === 'signup' && (
@@ -73,9 +73,6 @@ export function AuthGate({ children }: { children: React.ReactNode }) {
             )}
           </div>
         </form>
-        <div className="mt-6 text-xs text-slate-500 bg-amber-50 border border-amber-200 rounded-lg p-3">
-          Demo fallback: if you clear <code>VITE_SUPABASE_URL</code> from <code>.env</code>, the app runs in local demo mode with the role switcher and no sign-in required.
-        </div>
       </Card>
       </div>
     </>

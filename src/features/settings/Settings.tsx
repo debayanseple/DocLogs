@@ -24,14 +24,14 @@ export function Settings() {
   const [facForm, setFacForm] = useState<Partial<Facility>>({ name: '', facilityType: 'OPD Centre', address: '', contact: '', status: 'Active', notes: '' })
 
   const displayName = profileName || user?.email?.split('@')[0] || (role === 'Surgeon' ? 'Dr. Arjun Sen' : 'Priya Das')
-  const displayEmail = user?.email || (role === 'Surgeon' ? 'arjun.sen@clinicalog.demo' : 'priya.das@clinicalog.demo')
+  const displayEmail = user?.email || (role === 'Surgeon' ? 'arjun.sen@clinicalog.app' : 'priya.das@clinicalog.app')
   const initials = displayName
     .split(' ')
     .map((s) => s[0])
     .slice(0, 2)
     .join('')
     .toUpperCase()
-  const isSupabase = !!user
+  const isSignedIn = !!user
   const { isDoctor, assistantInvite, addAssistant, removeAssistant } = useData() as unknown as { isDoctor: boolean; assistantInvite: { id: string; email: string; full_name: string; created_at: string } | null; addAssistant: (e: string, n: string) => Promise<{ error: string | null }>; removeAssistant: () => Promise<{ error: string | null }> }
   const [assName, setAssName] = useState('')
   const [assEmail, setAssEmail] = useState('')
@@ -44,7 +44,7 @@ export function Settings() {
     const url = URL.createObjectURL(blob)
     const a = document.createElement('a')
     a.href = url
-    a.download = `clinicalog-demo-export-${new Date().toISOString().slice(0, 10)}.json`
+    a.download = `clinicalog-export-${new Date().toISOString().slice(0, 10)}.json`
     a.click()
     URL.revokeObjectURL(url)
   }
@@ -86,16 +86,15 @@ export function Settings() {
   return (
     <div className="space-y-6 max-w-3xl">
       <Card>
-        <CardHeader title="Profile" subtitle={isSupabase ? 'Your workspace profile' : 'Profile'} />
+        <CardHeader title="Profile" subtitle={isSignedIn ? 'Your workspace profile' : 'Profile'} />
         <div className="flex gap-4">
           <div className="w-14 h-14 rounded-2xl bg-[#162a4d] text-white flex items-center justify-center font-bold text-lg">{initials}</div>
           <div className="flex-1">
             <div className="font-semibold text-slate-900">{displayName}</div>
             <div className="text-sm text-slate-600">{displayEmail}</div>
-            <div className="text-xs text-slate-500 mt-1">OMFS — Head & Neck Oncology · Kolkata {isSupabase ? `· ${user?.id.slice(0, 8)}` : `· ${role}`}</div>
-            {isSupabase && <div className="text-xs text-slate-500 mt-1">Signed in via Supabase Auth — workspace is private to this account.</div>}
-            {!isSupabase && <div className="text-xs text-slate-500 mt-1">Demo account — {role} role</div>}
-            {isSupabase && (
+            <div className="text-xs text-slate-500 mt-1">OMFS — Head & Neck Oncology · Kolkata · {role}</div>
+            {isSignedIn && <div className="text-xs text-slate-500 mt-1">Signed in — your data is private to this account.</div>}
+            {isSignedIn && (
               <div className="mt-3">
                 <Button variant="outline" size="sm" onClick={() => signOut()}>Sign out</Button>
               </div>
@@ -185,13 +184,13 @@ export function Settings() {
         </div>
       </Card>
 
-      {/* Collapsible technical details at bottom */}
+      {/* Preferences & data at bottom */}
       <div className="glass rounded-2xl overflow-hidden">
         <button
           onClick={() => setShowTechnical(!showTechnical)}
           className="w-full flex items-center justify-between px-5 py-3 text-sm font-medium text-slate-700 hover:bg-white/50"
         >
-          <span>Technical details</span>
+          <span>Preferences & data</span>
           <ChevronDown className={`w-4 h-4 transition-transform ${showTechnical ? 'rotate-180' : ''}`} />
         </button>
         {showTechnical && (
@@ -205,27 +204,19 @@ export function Settings() {
                   {data.facilities.filter((f) => f.status === 'Active').map((f) => <option key={f.id} value={f.id}>{f.name}</option>)}
                 </Select>
               </div>
-              <div className="text-xs text-slate-500 mt-2">Timezone display: Asia/Kolkata (IST). Storage is UTC.</div>
+              <div className="text-xs text-slate-500 mt-2">Times shown in Asia/Kolkata (IST).</div>
             </div>
 
             <div className="glass-subtle rounded-xl p-4">
               <div className="text-sm font-semibold text-slate-900 mb-3">Data & privacy</div>
               <div className="flex flex-wrap gap-2">
-                <Button variant="outline" onClick={handleExportAll}>{usingSupabase ? 'Export workspace data (JSON)' : 'Export demo data (JSON)'}</Button>
-                <Button variant="outline" onClick={() => exportToCsv(`patients-${new Date().toISOString().slice(0,10)}.csv`, ['Patient ID','Name','Phone','Status'], data.patients.map((p) => [p.patientNumber, p.name, p.phone ?? '', p.status]))}>Export patients CSV</Button>
-                {!usingSupabase && <Button variant="danger" onClick={() => setShowReset(true)}>Reset demo dataset</Button>}
+                <Button variant="outline" onClick={handleExportAll}>Export all data</Button>
+                <Button variant="outline" onClick={() => exportToCsv(`patients-${new Date().toISOString().slice(0,10)}.csv`, ['Patient ID','Name','Phone','Status'], data.patients.map((p) => [p.patientNumber, p.name, p.phone ?? '', p.status]))}>Export patients</Button>
+                {!usingSupabase && <Button variant="danger" onClick={() => setShowReset(true)}>Reset data</Button>}
               </div>
-              {!usingSupabase && (
-                <div className="text-xs text-slate-500 bg-amber-100/50 backdrop-blur-md border border-amber-200/60 rounded-lg p-3 mt-3">
-                  Demo persistence uses browser localStorage and is <span className="font-semibold">not secure for real patient data</span>.
-                </div>
-              )}
               <div className="text-xs text-slate-600 glass-subtle rounded-xl p-3 bg-slate-50 mt-3">
-                <div className="font-semibold">Prototype limitation notice</div>
+                <div className="font-semibold">Please note</div>
                 <ul className="list-disc ml-4 mt-1 space-y-1">
-                  <li>All data is synthetic and stored only in this browser.</li>
-                  <li>Do not use for real clinical records.</li>
-                  <li>Real deployment requires: secure server-side storage, authentication, RBAC, audit logs, protected file storage, encrypted backups, HTTPS/TLS, privacy/legal review.</li>
                   <li>Stage, diagnosis and prognosis are clinician-entered only — never inferred.</li>
                 </ul>
               </div>
@@ -261,13 +252,13 @@ export function Settings() {
         </div>
       </Modal>
 
-      <Modal open={showReset} onClose={() => setShowReset(false)} title="Reset demo dataset?">
+      <Modal open={showReset} onClose={() => setShowReset(false)} title="Reset data?">
         <div className="space-y-4">
-          <p className="text-sm text-slate-600">This will delete all changes you made in this browser and restore the original synthetic seed data. This cannot be undone.</p>
+          <p className="text-sm text-slate-600">This will delete all changes you made and restore the original data. This cannot be undone.</p>
           <p className="text-sm font-medium text-slate-900">Are you sure you want to reset?</p>
           <div className="flex justify-end gap-2">
             <Button variant="outline" onClick={() => setShowReset(false)}>Cancel</Button>
-            <Button variant="danger" onClick={handleReset}>Reset demo data</Button>
+            <Button variant="danger" onClick={handleReset}>Reset data</Button>
           </div>
         </div>
       </Modal>

@@ -1,7 +1,7 @@
 import { createClient } from '@supabase/supabase-js'
 
 const url = import.meta.env.VITE_SUPABASE_URL as string | undefined
-// Supabase now calls the anon key "publishable" — support both names
+// Backend keys — support both current and legacy names
 const anonKey =
   (import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY as string | undefined) ??
   (import.meta.env.VITE_SUPABASE_ANON_KEY as string | undefined)
@@ -12,7 +12,7 @@ export const supabase = isSupabaseConfigured ? createClient(url!, anonKey!) : nu
 
 // helper for components to check
 export function getSupabase() {
-  if (!supabase) throw new Error('Supabase not configured — set VITE_SUPABASE_URL and VITE_SUPABASE_PUBLISHABLE_KEY (or VITE_SUPABASE_ANON_KEY) in .env')
+  if (!supabase) throw new Error('Backend is not configured. Please try again later.')
   return supabase
 }
 

@@ -265,7 +265,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
         })
       }
     } catch (e) {
-      console.error('Supabase fetch error', e)
+      console.error('Failed to load workspace data', e)
     } finally {
       setLoading(false)
       setReady(true)
@@ -329,7 +329,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
               // patient is still saved; run the migration to keep these fields
               const { chief_complaint: _cc, referred_by: _rb, tests_available: _ta, ...legacy } = payload
               insertPatient(legacy, true)
-            } else if (error) console.error('addPatient supabase error', error)
+            } else if (error) console.error('Failed to save patient', error)
           })
       }
       insertPatient(rest)

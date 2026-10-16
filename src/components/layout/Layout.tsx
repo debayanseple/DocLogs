@@ -7,7 +7,6 @@ import {
   User,
 } from 'lucide-react'
 import { useAuth } from '../../services/auth'
-import { useData } from '../../services/repository'
 
 export const navItems = [
   { to: '/', label: 'Home', icon: LayoutDashboard },
@@ -18,7 +17,6 @@ export const navItems = [
 
 export function Layout() {
   const { user, profileName } = useAuth()
-  const { usingSupabase } = useData()
 
   const wsName = profileName || user?.email?.split('@')[0] || 'Workspace'
 
@@ -33,7 +31,7 @@ export function Layout() {
         <SidebarNav />
         <SidebarFooter
           name={wsName}
-          sub={usingSupabase ? 'Private · Supabase RLS' : 'Synthetic demo data'}
+          sub="Private workspace"
         />
       </aside>
 
@@ -45,8 +43,7 @@ export function Layout() {
         </main>
 
         <footer className="hidden lg:block px-6 py-4 text-xs text-slate-500">
-          ClinicaLog OMFS — Private workspace. Data stored securely in Supabase
-          with RLS, audit logs and encrypted backups.
+          ClinicaLog OMFS — Private workspace. Your data stays private to your account.
         </footer>
       </div>
 
