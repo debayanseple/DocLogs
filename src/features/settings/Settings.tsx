@@ -37,6 +37,8 @@ export function Settings() {
   const [assEmail, setAssEmail] = useState('')
   const [assBusy, setAssBusy] = useState(false)
   const [assError, setAssError] = useState<string | null>(null)
+  const [removeError, setRemoveError] = useState<string | null>(null)
+  const [removing, setRemoving] = useState(false)
   const currentRoleLabel = isDoctor ? 'Doctor (Owner)' : 'Assistant'
 
   const handleExportAll = () => {
@@ -120,17 +122,34 @@ export function Settings() {
       <Card>
         <CardHeader title="Assistant" subtitle={isDoctor ? 'Doctor can add one assistant' : 'Only doctor can manage assistant'} />
         {assistantInvite ? (
-          <div className="flex items-center justify-between glass-subtle rounded-xl p-3">
-            <div>
-              <div className="text-sm font-medium text-slate-900">{assistantInvite.full_name}</div>
-              <div className="text-xs text-slate-600">{assistantInvite.email}</div>
-              <div className="text-xs text-slate-400 mt-1">Added · {new Date(assistantInvite.created_at).toLocaleDateString()}</div>
+          <div className="space-y-2">
+            <div className="flex items-center justify-between glass-subtle rounded-xl p-3">
+              <div>
+                <div className="text-sm font-medium text-slate-900">{assistantInvite.full_name}</div>
+                <div className="text-xs text-slate-600">{assistantInvite.email}</div>
+                <div className="text-xs text-slate-400 mt-1">Added · {new Date(assistantInvite.created_at).toLocaleDateString()}</div>
+              </div>
+              {isDoctor ? (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  disabled={removing}
+                  onClick={async () => {
+                    if (!confirm('Remove this assistant? They will lose access to your workspace.')) return
+                    setRemoveError(null)
+                    setRemoving(true)
+                    const r = await removeAssistant()
+                    setRemoving(false)
+                    if (r.error) setRemoveError(r.error)
+                  }}
+                >
+                  {removing ? 'Removing…' : 'Remove'}
+                </Button>
+              ) : (
+                <span className="text-xs text-slate-500">Managed by doctor</span>
+              )}
             </div>
-            {isDoctor ? (
-              <Button variant="outline" size="sm" onClick={async () => { if (!confirm('Remove assistant?')) return; const r = await removeAssistant(); if (r.error) alert(r.error) }}>Remove</Button>
-            ) : (
-              <span className="text-xs text-slate-500">Managed by doctor</span>
-            )}
+            {removeError && <div className="text-xs text-red-600 bg-red-100/50 backdrop-blur-md border border-red-200/60 rounded-lg p-2">{removeError}</div>}
           </div>
         ) : isDoctor ? (
           <div className="space-y-3">
@@ -143,7 +162,7 @@ export function Settings() {
             <Button
               onClick={async () => {
                 setAssError(null)
-                if (!assName.trim() || !assEmail.trim()) { setAssError('Name and email required'); return }
+                if (!assName.trim() || !assEmail.trim()) { setAssError('Please enter the assistant\u2019s name and email.'); return }
                 setAssBusy(true)
                 const { error } = await addAssistant(assEmail, assName)
                 setAssBusy(false)

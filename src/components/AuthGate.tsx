@@ -10,7 +10,7 @@ export function AuthGate({ children }: { children: React.ReactNode }) {
   const [fullName, setFullName] = useState('')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
-  const [msg, setMsg] = useState<string | null>(null)
+  const [msg, setMsg] = useState<{ text: string; kind: 'success' | 'error' } | null>(null)
   const [busy, setBusy] = useState(false)
 
   // If backend is not configured, fall back to local mode
@@ -35,14 +35,28 @@ export function AuthGate({ children }: { children: React.ReactNode }) {
   const handle = async (e: React.FormEvent) => {
     e.preventDefault()
     if (mode === 'signup' && !fullName.trim()) {
-      setMsg('Full name is required.')
+      setMsg({ text: 'Please enter your full name.', kind: 'error' })
       return
     }
     setBusy(true)
     setMsg(null)
-    const { error } =
-      mode === 'signin' ? await signIn(email, password) : await signUp(email, password, fullName)
-    setMsg(error ?? (mode === 'signup' ? 'Account created. Check your email if confirmation is required, then sign in.' : 'Signed in.'))
+    try {
+      const { error } =
+        mode === 'signin' ? await signIn(email, password) : await signUp(email, password, fullName)
+      if (error) {
+        setMsg({ text: error, kind: 'error' })
+      } else {
+        setMsg({
+          text:
+            mode === 'signup'
+              ? 'Account created. Please check your email to verify, then sign in.'
+              : 'Signed in. Welcome back.',
+          kind: 'success',
+        })
+      }
+    } catch {
+      setMsg({ text: 'Something went wrong. Please try again.', kind: 'error' })
+    }
     setBusy(false)
   }
 
@@ -63,7 +77,14 @@ export function AuthGate({ children }: { children: React.ReactNode }) {
           )}
           <Field label="Email"><Input type="email" required value={email} onChange={(e) => setEmail(e.target.value)} placeholder="you@example.com" /></Field>
           <Field label="Password"><Input type="password" required value={password} onChange={(e) => setPassword(e.target.value)} placeholder="••••••••" /></Field>
-          {msg && <div className={`text-sm p-2 rounded-lg border ${msg.includes('Check') || msg.includes('Signed') ? 'bg-emerald-50 border-emerald-200 text-emerald-700' : 'bg-red-50 border-red-200 text-red-700'}`}>{msg}</div>}
+          {msg && (
+            <div
+              role="alert"
+              className={`text-sm p-2 rounded-lg border ${msg.kind === 'success' ? 'bg-emerald-50 border-emerald-200 text-emerald-700' : 'bg-red-50 border-red-200 text-red-700'}`}
+            >
+              {msg.text}
+            </div>
+          )}
           <Button type="submit" disabled={busy} className="w-full">{busy ? 'Please wait…' : mode === 'signin' ? 'Sign in' : 'Create account'}</Button>
           <div className="text-sm text-center">
             {mode === 'signin' ? (

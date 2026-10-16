@@ -12,6 +12,7 @@ import type {
   AuditEvent,
 } from '../types'
 import { supabase, isSupabaseConfigured } from '../lib/supabase'
+import { friendlySaveError } from '../utils/errors'
 import { useAuth } from './auth'
 import {
   mapPatientFromDb,
@@ -505,15 +506,19 @@ export function DataProvider({ children }: { children: ReactNode }) {
   }
 
   const addAssistant: DataContextValue['addAssistant'] = async (email, fullName) => {
-    if (!isDoctor) return { error: 'Only doctor can add assistant' }
-    if (assistantInvite) return { error: 'Only one assistant allowed' }
-    if (!email.trim() || !fullName.trim()) return { error: 'Name and email required' }
+    if (!isDoctor) return { error: 'Only the doctor can add an assistant.' }
+    if (assistantInvite) return { error: 'You can add only one assistant.' }
+    if (!email.trim() || !fullName.trim()) return { error: 'Please enter the assistant\u2019s name and email.' }
     const invite: AssistantInvite = { id: genId('asst'), email: email.trim().toLowerCase(), full_name: fullName.trim(), created_at: new Date().toISOString() }
     if (usingSupabase && supabase && workspaceId) {
-      const { data: row, error } = await supabase.from('assistant_invites').insert({ workspace_id: workspaceId, email: invite.email, full_name: invite.full_name, invited_by: user?.id ?? null }).select('*').single()
-      if (error) return { error: error.message }
-      setAssistantInvite(row as unknown as AssistantInvite)
-      return { error: null }
+      try {
+        const { data: row, error } = await supabase.from('assistant_invites').insert({ workspace_id: workspaceId, email: invite.email, full_name: invite.full_name, invited_by: user?.id ?? null }).select('*').single()
+        if (error) return { error: friendlySaveError(error.message, 'assistant') }
+        setAssistantInvite(row as unknown as AssistantInvite)
+        return { error: null }
+      } catch {
+        return { error: friendlySaveError('network', 'assistant') }
+      }
     } else {
       // demo mode
       localStorage.setItem(ASSISTANT_KEY, JSON.stringify(invite))
@@ -523,13 +528,17 @@ export function DataProvider({ children }: { children: ReactNode }) {
   }
 
   const removeAssistant: DataContextValue['removeAssistant'] = async () => {
-    if (!isDoctor) return { error: 'Only doctor can remove assistant' }
+    if (!isDoctor) return { error: 'Only the doctor can remove the assistant.' }
     if (!assistantInvite) return { error: null }
     if (usingSupabase && supabase && workspaceId) {
-      const { error } = await supabase.from('assistant_invites').delete().eq('workspace_id', workspaceId)
-      if (error) return { error: error.message }
-      setAssistantInvite(null)
-      return { error: null }
+      try {
+        const { error } = await supabase.from('assistant_invites').delete().eq('workspace_id', workspaceId)
+        if (error) return { error: friendlySaveError(error.message, 'changes') }
+        setAssistantInvite(null)
+        return { error: null }
+      } catch {
+        return { error: friendlySaveError('network', 'changes') }
+      }
     } else {
       localStorage.removeItem(ASSISTANT_KEY)
       setAssistantInvite(null)

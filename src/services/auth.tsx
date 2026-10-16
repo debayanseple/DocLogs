@@ -1,5 +1,6 @@
 import { createContext, useContext, useEffect, useState, type ReactNode } from 'react'
 import { supabase, isSupabaseConfigured } from '../lib/supabase'
+import { friendlyAuthError } from '../utils/errors'
 import type { User, Session } from '@supabase/supabase-js'
 
 interface AuthCtx {
@@ -39,17 +40,25 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const signIn: AuthCtx['signIn'] = async (email, password) => {
     if (!supabase) return { error: 'Sign-in is currently unavailable. Please try again later.' }
-    const { error } = await supabase.auth.signInWithPassword({ email, password })
-    return { error: error?.message ?? null }
+    try {
+      const { error } = await supabase.auth.signInWithPassword({ email, password })
+      return { error: error ? friendlyAuthError(error.message) : null }
+    } catch {
+      return { error: friendlyAuthError('network') }
+    }
   }
   const signUp: AuthCtx['signUp'] = async (email, password, fullName) => {
     if (!supabase) return { error: 'Sign-up is currently unavailable. Please try again later.' }
-    const { error } = await supabase.auth.signUp({
-      email,
-      password,
-      options: { data: { full_name: fullName?.trim() || null, display_name: fullName?.trim() || null } },
-    })
-    return { error: error?.message ?? null }
+    try {
+      const { error } = await supabase.auth.signUp({
+        email,
+        password,
+        options: { data: { full_name: fullName?.trim() || null, display_name: fullName?.trim() || null } },
+      })
+      return { error: error ? friendlyAuthError(error.message) : null }
+    } catch {
+      return { error: friendlyAuthError('network') }
+    }
   }
   const signOut = async () => {
     if (supabase) await supabase.auth.signOut()
