@@ -79,17 +79,19 @@ export function FollowUps() {
   return (
     <div className="space-y-4">
       <Card className="!p-3">
-        <div className="flex items-center gap-1.5">
-          <div className="relative flex-1 min-w-0">
+        <div className="flex flex-wrap items-center gap-1.5">
+          <div className="relative w-full sm:w-auto sm:flex-1 sm:min-w-0 order-first">
             <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400" />
             <Input size="sm" placeholder="Search" value={q} onChange={(e) => setQ(e.target.value)} className="h-8 pl-8" />
           </div>
-          <FilterChip value={facility} onChange={(e) => setFacility(e.target.value)} aria-label="Filter by facility">
+          <FilterChip value={facility} onChange={(e) => setFacility(e.target.value)} aria-label="Filter by facility" className="max-w-[55%] [&>select]:truncate">
             <option value="all">All facilities</option>
             {data.facilities.filter((f) => f.status === 'Active').map((f) => <option key={f.id} value={f.id}>{f.name}</option>)}
           </FilterChip>
-          <Button size="sm" variant="outline" onClick={handleExport} className="shrink-0 px-2"><Download className="w-3.5 h-3.5" /><span className="sr-only sm:not-sr-only">CSV</span></Button>
-          <Button size="sm" onClick={() => setShowAdd(true)} className="shrink-0 px-2.5"><Plus className="w-3.5 h-3.5" /><span className="sr-only sm:not-sr-only">New follow-up</span></Button>
+          <div className="flex items-center gap-1.5 ml-auto shrink-0">
+            <Button size="sm" variant="outline" onClick={handleExport} className="px-2"><Download className="w-3.5 h-3.5" /><span className="sr-only sm:not-sr-only">CSV</span></Button>
+            <Button size="sm" onClick={() => setShowAdd(true)} className="px-2.5"><Plus className="w-3.5 h-3.5" /><span className="sr-only sm:not-sr-only">New follow-up</span></Button>
+          </div>
         </div>
       </Card>
 

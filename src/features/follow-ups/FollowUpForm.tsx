@@ -48,7 +48,7 @@ export function FollowUpForm({ patientId: fixedPatientId, followUp, onClose }: {
           <Input type="date" value={form.dueDate ?? ''} onChange={(e) => setForm({ ...form, dueDate: e.target.value })} />
         </Field>
       </div>
-      <div className="flex justify-end gap-1.5">
+      <div className="flex flex-wrap justify-end gap-1.5">
         <Button type="button" variant="outline" onClick={onClose}>Cancel</Button>
         <Button type="submit">{followUp ? 'Save' : 'Create'}</Button>
       </div>

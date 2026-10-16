@@ -51,11 +51,11 @@ export function CancerRegistry() {
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
             <Input placeholder="Search by patient, site, histology or episode ID" value={q} onChange={(e) => setQ(e.target.value)} className="pl-10" />
           </div>
-          <Select value={site} onChange={(e) => setSite(e.target.value)} className="w-[200px]">
+          <Select value={site} onChange={(e) => setSite(e.target.value)} className="w-full lg:w-[200px]">
             <option value="all">All sites</option>
             {sites.map((s) => <option key={s} value={s}>{s}</option>)}
           </Select>
-          <Select value={status} onChange={(e) => setStatus(e.target.value)} className="w-[180px]">
+          <Select value={status} onChange={(e) => setStatus(e.target.value)} className="w-full lg:w-[180px]">
             <option value="all">All statuses</option>
             <option value="Draft">Draft</option>
             <option value="Pending Review">Pending Review</option>
@@ -70,7 +70,7 @@ export function CancerRegistry() {
 
       <Card padding={false} className="overflow-hidden">
         <div className="overflow-x-auto">
-          <table className="w-full text-sm">
+          <table className="w-full min-w-[760px] text-sm">
             <thead className="bg-white/50 backdrop-blur-sm border-b border-white/70">
               <tr className="text-left text-slate-500">
                 <th className="px-4 py-3 font-medium">Episode ID</th>

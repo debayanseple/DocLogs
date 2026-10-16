@@ -90,10 +90,10 @@ export function Settings() {
       <Card>
         <CardHeader title="Profile" subtitle={isSignedIn ? 'Your workspace profile' : 'Profile'} />
         <div className="flex gap-4">
-          <div className="w-14 h-14 rounded-2xl bg-[#162a4d] text-white flex items-center justify-center font-bold text-lg">{initials}</div>
-          <div className="flex-1">
-            <div className="font-semibold text-slate-900">{displayName}</div>
-            <div className="text-sm text-slate-600">{displayEmail}</div>
+          <div className="w-14 h-14 shrink-0 rounded-2xl bg-[#162a4d] text-white flex items-center justify-center font-bold text-lg">{initials}</div>
+          <div className="flex-1 min-w-0">
+            <div className="font-semibold text-slate-900 truncate">{displayName}</div>
+            <div className="text-sm text-slate-600 break-all">{displayEmail}</div>
             <div className="text-xs text-slate-500 mt-1">OMFS — Head & Neck Oncology · Kolkata · {role}</div>
             {isSignedIn && <div className="text-xs text-slate-500 mt-1">Signed in — your data is private to this account.</div>}
             {isSignedIn && (
@@ -107,7 +107,7 @@ export function Settings() {
 
       <Card>
         <CardHeader title="Role" subtitle="Fixed — cannot be changed. Doctor is primary holder." />
-        <div className="flex items-center gap-3">
+        <div className="flex flex-wrap items-center gap-3">
           <span className="text-sm text-slate-600">Your role:</span>
           <span className={`px-3 py-1 rounded-full text-xs font-medium ${isDoctor ? 'bg-[#162a4d] text-white' : 'bg-teal-600 text-white'}`}>{currentRoleLabel}</span>
           <span className="text-xs text-slate-500">{isDoctor ? 'Can add 1 assistant' : 'Assistant — limited permissions'}</span>
@@ -123,9 +123,9 @@ export function Settings() {
         <CardHeader title="Assistant" subtitle={isDoctor ? 'Doctor can add one assistant' : 'Only doctor can manage assistant'} />
         {assistantInvite ? (
           <div className="space-y-2">
-            <div className="flex items-center justify-between glass-subtle rounded-xl p-3">
-              <div>
-                <div className="text-sm font-medium text-slate-900">{assistantInvite.full_name}</div>
+            <div className="flex items-center justify-between gap-2 glass-subtle rounded-xl p-3">
+              <div className="min-w-0">
+                <div className="text-sm font-medium text-slate-900 truncate">{assistantInvite.full_name}</div>
                 <div className="text-xs text-slate-600">{assistantInvite.email}</div>
                 <div className="text-xs text-slate-400 mt-1">Added · {new Date(assistantInvite.created_at).toLocaleDateString()}</div>
               </div>

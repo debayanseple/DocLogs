@@ -291,7 +291,7 @@ export function PatientForm({ patient, onClose }: { patient?: Patient; onClose: 
         </div>
       )}
 
-      <div className="flex justify-end gap-1.5 pt-2">
+      <div className="flex flex-wrap justify-end gap-1.5 pt-2">
         <Button type="button" variant="outline" onClick={onClose}>Cancel</Button>
         <Button type="submit">{patient ? 'Save' : 'Create — 1 tap'}</Button>
       </div>

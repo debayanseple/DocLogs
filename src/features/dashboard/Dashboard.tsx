@@ -105,7 +105,7 @@ export function Dashboard() {
       <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-3 sm:gap-4">
         <Card className="!p-4">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-slate-900 flex items-center justify-center"><Users className="w-5 h-5 text-white" /></div>
+            <div className="w-10 h-10 shrink-0 rounded-xl bg-slate-900 flex items-center justify-center"><Users className="w-5 h-5 text-white" /></div>
             <div>
               <div className="text-2xl font-bold text-slate-900 leading-none">{totalPatients}</div>
               <div className="text-xs text-slate-500 mt-1">Total patients</div>
@@ -114,7 +114,7 @@ export function Dashboard() {
         </Card>
         <Card className="!p-4">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-teal-600 flex items-center justify-center"><Stethoscope className="w-5 h-5 text-white" /></div>
+            <div className="w-10 h-10 shrink-0 rounded-xl bg-teal-600 flex items-center justify-center"><Stethoscope className="w-5 h-5 text-white" /></div>
             <div>
               <div className="text-2xl font-bold text-slate-900 leading-none">{opdThisMonth}</div>
               <div className="text-xs text-slate-500 mt-1">OPD this month</div>
@@ -123,7 +123,7 @@ export function Dashboard() {
         </Card>
         <Card className="!p-4">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-blue-600 flex items-center justify-center"><FileText className="w-5 h-5 text-white" /></div>
+            <div className="w-10 h-10 shrink-0 rounded-xl bg-blue-600 flex items-center justify-center"><FileText className="w-5 h-5 text-white" /></div>
             <div>
               <div className="text-2xl font-bold text-slate-900 leading-none">{cancerTotal}</div>
               <div className="text-xs text-slate-500 mt-1">{activeCancer} active</div>
@@ -133,7 +133,7 @@ export function Dashboard() {
         </Card>
         <Card className="!p-4">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-indigo-600 flex items-center justify-center"><Scissors className="w-5 h-5 text-white" /></div>
+            <div className="w-10 h-10 shrink-0 rounded-xl bg-indigo-600 flex items-center justify-center"><Scissors className="w-5 h-5 text-white" /></div>
             <div>
               <div className="text-2xl font-bold text-slate-900 leading-none">{opsThisMonth}</div>
               <div className="text-xs text-slate-500 mt-1">Operations this month</div>
@@ -142,7 +142,7 @@ export function Dashboard() {
         </Card>
         <Card className="!p-4">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-amber-500 flex items-center justify-center"><CalendarClock className="w-5 h-5 text-white" /></div>
+            <div className="w-10 h-10 shrink-0 rounded-xl bg-amber-500 flex items-center justify-center"><CalendarClock className="w-5 h-5 text-white" /></div>
             <div>
               <div className="text-2xl font-bold text-slate-900 leading-none">{dueFollowUps}</div>
               <div className="text-xs text-slate-500 mt-1">Follow-ups due</div>
@@ -151,7 +151,7 @@ export function Dashboard() {
         </Card>
         <Card className="!p-4 border-amber-200/60 bg-amber-100/40 backdrop-blur-md">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-red-600 flex items-center justify-center"><AlertTriangle className="w-5 h-5 text-white" /></div>
+            <div className="w-10 h-10 shrink-0 rounded-xl bg-red-600 flex items-center justify-center"><AlertTriangle className="w-5 h-5 text-white" /></div>
             <div>
               <div className="text-2xl font-bold text-red-700 leading-none">{overdue}</div>
               <div className="text-xs text-red-600 mt-1">Overdue</div>

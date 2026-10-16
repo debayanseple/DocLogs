@@ -261,7 +261,7 @@ export function PatientDetails() {
             {data.opdVisits.filter((v) => v.patientId === patient.id).sort((a, b) => +new Date(b.visitDate) - +new Date(a.visitDate)).map((v) => (
               <div key={v.id} className="glass-subtle rounded-xl p-4">
                 <div className="flex items-start justify-between gap-2">
-                  <div>
+                  <div className="min-w-0">
                     <div className="font-medium text-slate-900">{formatDateTime(v.visitDate)} · {v.visitType} · {facilityMap.get(v.facilityId)?.name}</div>
                     <div className="text-sm text-slate-700 mt-1">{v.chiefComplaint}</div>
                     <div className="text-xs text-slate-500 mt-1 line-clamp-2">{v.assessment ?? ''}</div>
@@ -282,7 +282,7 @@ export function PatientDetails() {
             {data.cancerEpisodes.filter((c) => c.patientId === patient.id).map((c) => (
               <div key={c.id} className="glass-subtle rounded-xl p-4">
                 <div className="flex items-start justify-between gap-2">
-                  <div>
+                  <div className="min-w-0">
                     <div className="font-medium text-slate-900">{c.episodeId} · {c.primarySite} {c.subsite ? `· ${c.subsite}` : ''} · {c.laterality}</div>
                     <div className="text-sm text-slate-600">Dx {formatDate(c.diagnosisDate)} · {c.histology ?? '—'} {c.histologyGrade ?? ''}</div>
                     <div className="text-xs mt-1 flex gap-2 flex-wrap"><Badge>{c.stagingSystem ?? '—'} {c.stagingEdition ?? ''}</Badge> <Badge>{c.stageType}</Badge> <span>{c.tCategory} {c.nCategory} {c.mCategory} {c.stageGroup}</span></div>
@@ -304,7 +304,7 @@ export function PatientDetails() {
             {data.operations.filter((o) => o.patientId === patient.id).map((o) => (
               <div key={o.id} className="glass-subtle rounded-xl p-4">
                 <div className="flex justify-between gap-2">
-                  <div className="font-medium text-slate-900">{formatDate(o.operationDate)} · {o.procedures.map((p) => p.name).join(' + ')} · {facilityMap.get(o.facilityId)?.name}</div>
+                  <div className="font-medium text-slate-900 min-w-0">{formatDate(o.operationDate)} · {o.procedures.map((p) => p.name).join(' + ')} · {facilityMap.get(o.facilityId)?.name}</div>
                   <StatusBadge status={o.status} />
                 </div>
                 <div className="text-sm text-slate-600 mt-1">Pre: {o.preOpDiagnosis} → Post: {o.postOpDiagnosis}</div>
@@ -353,7 +353,7 @@ export function PatientDetails() {
           <div className="space-y-2">
             {data.followUps.filter((f) => f.patientId === patient.id).sort((a, b) => +new Date(a.dueDate) - +new Date(b.dueDate)).map((fu) => (
               <div key={fu.id} className="glass-subtle rounded-xl p-3 flex items-center justify-between gap-2">
-                <div>
+                <div className="min-w-0">
                   <div className="text-sm font-medium">{fu.reason} · {formatDate(fu.dueDate)}</div>
                   <div className="text-xs text-slate-500">{facilityMap.get(fu.facilityId ?? '')?.name ?? '—'} · {fu.assignedTo ?? '—'}</div>
                 </div>
@@ -384,9 +384,9 @@ export function PatientDetails() {
               ]
               return relatedIds.includes(a.recordId)
             }).map((a) => (
-              <div key={a.id} className="flex justify-between border-b border-slate-100 py-2">
-                <span>{a.action} — {a.recordType} <span className="text-slate-500">{a.recordId.slice(0, 8)}</span> by {a.userName}</span>
-                <span className="text-slate-500">{formatDateTime(a.timestamp)}</span>
+              <div key={a.id} className="flex justify-between gap-2 border-b border-slate-100 py-2">
+                <span className="min-w-0">{a.action} — {a.recordType} <span className="text-slate-500">{a.recordId.slice(0, 8)}</span> by {a.userName}</span>
+                <span className="text-slate-500 shrink-0 text-xs sm:text-sm">{formatDateTime(a.timestamp)}</span>
               </div>
             ))}
             {data.auditEvents.filter((a) => {

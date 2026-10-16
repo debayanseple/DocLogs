@@ -167,7 +167,7 @@ export function OtForm({ patientId: fixedPatientId, op, onClose }: { patientId?:
         </div>
       )}
 
-      <div className="flex justify-end gap-1.5">
+      <div className="flex flex-wrap justify-end gap-1.5">
         <Button type="button" variant="outline" onClick={onClose}>Cancel</Button>
         {isFinalised ? <Button type="button" onClick={() => handleSubmit('Amended')}>Save</Button> : <><Button type="button" variant="outline" onClick={() => handleSubmit('Draft')}>Draft</Button><Button type="button" onClick={() => handleSubmit(canFinalise ? 'Finalised' : 'Pending Review')}>Save</Button></>}
       </div>
