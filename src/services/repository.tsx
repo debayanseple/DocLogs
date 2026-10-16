@@ -29,7 +29,8 @@ import {
   mapFollowUpToDb,
 } from './supabaseMappers'
 
-const STORAGE_KEY = 'clinicalog_demo_v1'
+const STORAGE_KEY = 'clinicalog_demo_v2'
+const LEGACY_STORAGE_KEY = 'clinicalog_demo_v1'
 
 interface StoreData {
   facilities: Facility[]
@@ -45,6 +46,8 @@ interface StoreData {
 
 function loadInitial(): StoreData {
   try {
+    // one-time cleanup of the retired v1 store (held the old sample data)
+    localStorage.removeItem(LEGACY_STORAGE_KEY)
     const raw = localStorage.getItem(STORAGE_KEY)
     if (raw) {
       const parsed = JSON.parse(raw) as StoreData
@@ -549,6 +552,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
 
   const resetDemo = () => {
     localStorage.removeItem(STORAGE_KEY)
+    localStorage.removeItem(LEGACY_STORAGE_KEY)
     localStorage.removeItem(ASSISTANT_KEY)
     setData({ ...initialData, auditEvents: [] })
     setAssistantInvite(null)

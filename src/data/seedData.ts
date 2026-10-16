@@ -618,15 +618,16 @@ export const seedFollowUps: FollowUp[] = [
   },
 ]
 
-// helper to get “today” dynamic overdue calc — we keep dates static except fu2 which is tomorrow
+// Fresh start: no sample patients or records. Facilities and users are kept
+// so facility pickers and demo roles keep working.
 export const initialData = {
   facilities: seedFacilities,
-  patients: seedPatients,
-  opdVisits: seedOpdVisits,
-  cancerEpisodes: seedCancerEpisodes,
-  operations: seedOperations,
-  followUps: seedFollowUps,
-  investigations: seedInvestigations,
-  pathology: seedPathology,
+  patients: [],
+  opdVisits: [],
+  cancerEpisodes: [],
+  operations: [],
+  followUps: [],
+  investigations: [],
+  pathology: [],
   users: seedUsers,
 }
