@@ -333,8 +333,12 @@ alter table consent_records enable row level security;
 alter table subscriptions enable row level security;
 
 -- Helper: is member of workspace?
+-- SECURITY DEFINER is required: this function reads workspace_members, and
+-- the RLS policy on workspace_members calls this function. Without
+-- SECURITY DEFINER the policy is re-entered for every row read and the
+-- recursion exhausts the stack ("stack depth limit exceeded", 54001).
 create or replace function is_workspace_member(w_id uuid)
-returns boolean language sql stable as $$
+returns boolean language sql stable security definer set search_path = public as $$
   select exists (
     select 1 from workspace_members
     where workspace_id = w_id and user_id = auth.uid()
@@ -343,12 +347,31 @@ $$;
 
 -- Policies: allow member to read/write their workspace's rows
 -- Workspaces
+-- The owner must be able to read their own workspace: a brand-new owner is
+-- not yet a member of the workspace they just created, so a membership-only
+-- SELECT policy makes the bootstrap (insert + read back) impossible.
 drop policy if exists "members can select workspaces" on workspaces;
-create policy "members can select workspaces" on workspaces for select using (is_workspace_member(id));
+create policy "members can select workspaces" on workspaces for select using (owner_user_id = auth.uid() or is_workspace_member(id));
 drop policy if exists "authenticated can insert workspaces" on workspaces;
 create policy "authenticated can insert workspaces" on workspaces for insert with check (auth.role() = 'authenticated');
 drop policy if exists "owners can update workspaces" on workspaces;
 create policy "owners can update workspaces" on workspaces for update using (owner_user_id = auth.uid());
+
+-- One workspace per owner: a concurrent double-bootstrap must not create two.
+do $$
+begin
+  if not exists (select 1 from pg_constraint where conname = 'workspaces_owner_user_id_key') then
+    alter table workspaces add constraint workspaces_owner_user_id_key unique (owner_user_id);
+  end if;
+end $$;
+
+-- Facility names unique per workspace, so seeding is idempotent.
+do $$
+begin
+  if not exists (select 1 from pg_constraint where conname = 'facilities_workspace_id_name_key') then
+    alter table facilities add constraint facilities_workspace_id_name_key unique (workspace_id, name);
+  end if;
+end $$;
 
 -- Facilities
 drop policy if exists "members manage facilities" on facilities;
@@ -390,9 +413,35 @@ create policy "members manage ot_team" on ot_team_members for all using (
   exists (select 1 from ot_records r where r.id = ot_team_members.ot_record_id and is_workspace_member(r.workspace_id))
 );
 
--- workspace_members: user can read their own memberships; insert handled by backend/owner
+-- workspace_members
+-- There is no server-side backend in this app: the client talks to Supabase
+-- directly, so the membership row that establishes membership has to be
+-- insertable by the client — otherwise a signup can never create a workspace.
 drop policy if exists "users read own memberships" on workspace_members;
 create policy "users read own memberships" on workspace_members for select using (user_id = auth.uid() or is_workspace_member(workspace_id));
+drop policy if exists "owners can insert workspace_members" on workspace_members;
+create policy "owners can insert workspace_members" on workspace_members for insert with check (
+  user_id = auth.uid()
+  or exists (select 1 from workspaces w where w.id = workspace_members.workspace_id and w.owner_user_id = auth.uid())
+);
+drop policy if exists "owners can update workspace_members" on workspace_members;
+create policy "owners can update workspace_members" on workspace_members for update
+  using (exists (select 1 from workspaces w where w.id = workspace_members.workspace_id and w.owner_user_id = auth.uid()))
+  with check (exists (select 1 from workspaces w where w.id = workspace_members.workspace_id and w.owner_user_id = auth.uid()));
+drop policy if exists "owners can delete workspace_members" on workspace_members;
+create policy "owners can delete workspace_members" on workspace_members for delete
+  using (exists (select 1 from workspaces w where w.id = workspace_members.workspace_id and w.owner_user_id = auth.uid()));
+drop policy if exists "users update own memberships" on workspace_members;
+create policy "users update own memberships" on workspace_members for update using (user_id = auth.uid());
+
+-- assistant_invites
+-- A prospective assistant must be able to read the invite addressed to their
+-- own email, otherwise they can never discover the workspace they were
+-- invited to and end up creating an unrelated one of their own.
+drop policy if exists "members manage invites" on assistant_invites;
+create policy "members manage invites" on assistant_invites for all
+  using (is_workspace_member(workspace_id) or lower(email) = lower(coalesce(auth.jwt() ->> 'email', '')))
+  with check (is_workspace_member(workspace_id));
 
 -- Storage bucket for private documents (create in dashboard if not exists)
 -- insert into storage.buckets (id, name, public) values ('clinical-docs','clinical-docs', false) on conflict do nothing;

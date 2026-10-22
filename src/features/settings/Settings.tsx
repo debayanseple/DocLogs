@@ -32,7 +32,7 @@ export function Settings() {
     .join('')
     .toUpperCase()
   const isSignedIn = !!user
-  const { isDoctor, assistantInvite, addAssistant, removeAssistant } = useData() as unknown as { isDoctor: boolean; assistantInvite: { id: string; email: string; full_name: string; created_at: string } | null; addAssistant: (e: string, n: string) => Promise<{ error: string | null }>; removeAssistant: () => Promise<{ error: string | null }> }
+  const { isDoctor, assistantInvite, addAssistant, removeAssistant } = useData()
   const [assName, setAssName] = useState('')
   const [assEmail, setAssEmail] = useState('')
   const [assBusy, setAssBusy] = useState(false)

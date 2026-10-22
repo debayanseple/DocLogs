@@ -34,16 +34,30 @@ export function CancerForm({ patientId: fixedPatientId, episode, onClose }: { pa
   const handleSubmit = (status: CancerEpisode['status']) => {
     if (!validate()) return
     if (status === 'Finalised' && !canFinalise) { alert('Only Surgeon can finalise'); return }
-    const payload = { ...form, status }
+    let amendmentReason: string | undefined
+    if (episode && isFinalised && status === 'Amended') {
+      const reason = window.prompt('Why is this cancer episode being amended? The previous values will be kept in the record history.')
+      if (reason === null) return
+      amendmentReason = reason.trim() || 'Amendment (no reason given)'
+    }
+    const payload = { ...form, status, amendmentReason }
     if (episode) {
       updateCancerEpisode(episode.id, payload as Partial<CancerEpisode>)
     } else {
       const rec = addCancerEpisode({
         patientId: form.patientId!,
         primarySite: form.primarySite!.trim(),
+        subsite: form.subsite,
         laterality: (form.laterality as CancerEpisode['laterality']) ?? 'Unknown',
         diagnosisDate: form.diagnosisDate!,
         histology: form.histology,
+        histologyGrade: form.histologyGrade,
+        pathologyReportRef: form.pathologyReportRef,
+        investigations: form.investigations,
+        mdtDate: form.mdtDate,
+        mdtNotes: form.mdtNotes,
+        treatmentHistory: form.treatmentHistory,
+        notes: form.notes,
         status: status as CancerEpisode['status'],
         facilityId: form.facilityId,
         createdBy: role,
@@ -100,6 +114,11 @@ export function CancerForm({ patientId: fixedPatientId, episode, onClose }: { pa
             <Field label="M"><Input value={form.mCategory ?? ''} onChange={(e) => setForm({ ...form, mCategory: e.target.value })} placeholder="cM0" /></Field>
           </div>
           <Field label="Stage group"><Input value={form.stageGroup ?? ''} onChange={(e) => setForm({ ...form, stageGroup: e.target.value })} placeholder="Stage III — optional" /></Field>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <Field label="MDT date"><Input type="date" value={form.mdtDate ?? ''} onChange={(e) => setForm({ ...form, mdtDate: e.target.value })} /></Field>
+            <Field label="Subsite"><Input value={form.subsite ?? ''} onChange={(e) => setForm({ ...form, subsite: e.target.value })} placeholder="e.g. lateral border" /></Field>
+          </div>
+          <Field label="MDT notes"><Textarea value={form.mdtNotes ?? ''} onChange={(e) => setForm({ ...form, mdtNotes: e.target.value })} rows={2} placeholder="MDT discussion, panel decisions…" /></Field>
           <Field label="Notes"><Textarea value={form.notes ?? ''} onChange={(e) => setForm({ ...form, notes: e.target.value })} rows={2} placeholder="MDT, treatment plan…" /></Field>
         </div>
       )}

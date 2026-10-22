@@ -5,15 +5,25 @@ import { Card, CardHeader } from '../../components/ui/Card'
 import { Button } from '../../components/ui/Button'
 import { StatusBadge, Badge } from '../../components/ui/Badge'
 import { formatDate, formatDateTime, calculateAge } from '../../utils/dates'
-import { ArrowLeft, Stethoscope, FileText, Scissors, CalendarCheck, CalendarClock, Beaker, Phone, MapPin, Edit2, Plus } from 'lucide-react'
+import { ArrowLeft, Stethoscope, FileText, Scissors, CalendarCheck, CalendarClock, Beaker, Phone, MapPin, Edit2, Plus, Pencil } from 'lucide-react'
 import { Modal } from '../../components/ui/Modal'
 import { OpdForm } from '../opd/OpdForm'
 import { CancerForm } from '../cancer-registry/CancerForm'
 import { OtForm } from '../ot/OtForm'
 import { FollowUpForm } from '../follow-ups/FollowUpForm'
 import { PatientForm } from './PatientForm'
-import type { TimelineEvent } from '../../types'
+import type { TimelineEvent, OpdVisit, CancerEpisode, OperationRecord, FollowUp } from '../../types'
 import { SkeletonPage, Skeleton, SkeletonCard } from '../../components/ui/Skeleton'
+
+function parseAuditDetails(details?: string): { reason?: string; replaced?: Record<string, unknown> | null } {
+  if (!details) return {}
+  try {
+    const parsed = JSON.parse(details) as { reason?: string; replaced?: Record<string, unknown> | null }
+    return { reason: parsed.reason ?? undefined, replaced: parsed.replaced ?? null }
+  } catch {
+    return {}
+  }
+}
 
 export function PatientDetails() {
   const { id } = useParams()
@@ -26,6 +36,12 @@ export function PatientDetails() {
   const [addCancer, setAddCancer] = useState(false)
   const [addOt, setAddOt] = useState(false)
   const [addFu, setAddFu] = useState(false)
+  // Edit (amend) state — a finalised record must be correctable, otherwise
+  // the whole Draft → Review → Finalised → Amended workflow is unreachable.
+  const [editOpd, setEditOpd] = useState<OpdVisit | null>(null)
+  const [editCancer, setEditCancer] = useState<CancerEpisode | null>(null)
+  const [editOt, setEditOt] = useState<OperationRecord | null>(null)
+  const [editFu, setEditFu] = useState<FollowUp | null>(null)
 
   const facilityMap = useMemo(() => new Map(data.facilities.map((f) => [f.id, f])), [data.facilities])
 
@@ -49,6 +65,18 @@ export function PatientDetails() {
     }
     return ev.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
   }, [patient, data.opdVisits, data.cancerEpisodes, data.operations, data.followUps, data.investigations, facilityMap])
+
+  // Events for this patient and for every record belonging to them.
+  const patientAuditEvents = useMemo(() => {
+    const relatedIds = new Set<string>([
+      patient?.id ?? '',
+      ...data.opdVisits.filter((v) => v.patientId === patient?.id).map((v) => v.id),
+      ...data.cancerEpisodes.filter((c) => c.patientId === patient?.id).map((c) => c.id),
+      ...data.operations.filter((o) => o.patientId === patient?.id).map((o) => o.id),
+      ...data.followUps.filter((f) => f.patientId === patient?.id).map((f) => f.id),
+    ])
+    return data.auditEvents.filter((a) => relatedIds.has(a.recordId))
+  }, [data.auditEvents, data.opdVisits, data.cancerEpisodes, data.operations, data.followUps, patient])
 
   if (!ready) {
     return (
@@ -266,7 +294,17 @@ export function PatientDetails() {
                     <div className="text-sm text-slate-700 mt-1">{v.chiefComplaint}</div>
                     <div className="text-xs text-slate-500 mt-1 line-clamp-2">{v.assessment ?? ''}</div>
                   </div>
-                  <StatusBadge status={v.status} />
+                  <div className="flex items-center gap-2 shrink-0">
+                    <StatusBadge status={v.status} />
+                    <button
+                      type="button"
+                      onClick={() => setEditOpd(v)}
+                      title={v.status === 'Finalised' ? 'Amend visit' : 'Edit visit'}
+                      className="p-1.5 rounded-lg hover:bg-slate-100 active:bg-slate-200 text-slate-500 min-w-[32px] min-h-[32px] flex items-center justify-center"
+                    >
+                      <Pencil className="w-4 h-4" />
+                    </button>
+                  </div>
                 </div>
                 <div className="text-xs text-slate-500 mt-2">{v.clinician} · {formatDateTime(v.createdAt)} {v.amendmentHistory?.length ? `· ${v.amendmentHistory.length} amendments` : ''}</div>
               </div>
@@ -288,7 +326,17 @@ export function PatientDetails() {
                     <div className="text-xs mt-1 flex gap-2 flex-wrap"><Badge>{c.stagingSystem ?? '—'} {c.stagingEdition ?? ''}</Badge> <Badge>{c.stageType}</Badge> <span>{c.tCategory} {c.nCategory} {c.mCategory} {c.stageGroup}</span></div>
                     {c.mdtNotes && <div className="text-xs text-slate-600 mt-2 bg-slate-50 p-2 rounded-lg">MDT {formatDate(c.mdtDate)}: {c.mdtNotes}</div>}
                   </div>
-                  <StatusBadge status={c.status} />
+                  <div className="flex items-center gap-2 shrink-0">
+                    <StatusBadge status={c.status} />
+                    <button
+                      type="button"
+                      onClick={() => setEditCancer(c)}
+                      title={c.status === 'Finalised' ? 'Amend episode' : 'Edit episode'}
+                      className="p-1.5 rounded-lg hover:bg-slate-100 active:bg-slate-200 text-slate-500 min-w-[32px] min-h-[32px] flex items-center justify-center"
+                    >
+                      <Pencil className="w-4 h-4" />
+                    </button>
+                  </div>
                 </div>
                 <div className="text-xs text-slate-500 mt-2">{formatDateTime(c.createdAt)} · {c.createdBy}</div>
               </div>
@@ -305,7 +353,17 @@ export function PatientDetails() {
               <div key={o.id} className="glass-subtle rounded-xl p-4">
                 <div className="flex justify-between gap-2">
                   <div className="font-medium text-slate-900 min-w-0">{formatDate(o.operationDate)} · {o.procedures.map((p) => p.name).join(' + ')} · {facilityMap.get(o.facilityId)?.name}</div>
-                  <StatusBadge status={o.status} />
+                  <div className="flex items-center gap-2 shrink-0">
+                    <StatusBadge status={o.status} />
+                    <button
+                      type="button"
+                      onClick={() => setEditOt(o)}
+                      title={o.status === 'Finalised' ? 'Amend operation' : 'Edit operation'}
+                      className="p-1.5 rounded-lg hover:bg-slate-100 active:bg-slate-200 text-slate-500 min-w-[32px] min-h-[32px] flex items-center justify-center"
+                    >
+                      <Pencil className="w-4 h-4" />
+                    </button>
+                  </div>
                 </div>
                 <div className="text-sm text-slate-600 mt-1">Pre: {o.preOpDiagnosis} → Post: {o.postOpDiagnosis}</div>
                 <div className="text-xs text-slate-500 mt-1">Surgeon: {o.primarySurgeon} {o.assistants?.length ? `· Assist: ${o.assistants.join(', ')}` : ''} · Anaesthesia: {o.anaesthesiaType ?? '—'}</div>
@@ -357,7 +415,17 @@ export function PatientDetails() {
                   <div className="text-sm font-medium">{fu.reason} · {formatDate(fu.dueDate)}</div>
                   <div className="text-xs text-slate-500">{facilityMap.get(fu.facilityId ?? '')?.name ?? '—'} · {fu.assignedTo ?? '—'}</div>
                 </div>
-                <StatusBadge status={fu.status} />
+                <div className="flex items-center gap-2 shrink-0">
+                  <StatusBadge status={fu.status} />
+                  <button
+                    type="button"
+                    onClick={() => setEditFu(fu)}
+                    title="Edit follow-up"
+                    className="p-1.5 rounded-lg hover:bg-slate-100 active:bg-slate-200 text-slate-500 min-w-[32px] min-h-[32px] flex items-center justify-center"
+                  >
+                    <Pencil className="w-4 h-4" />
+                  </button>
+                </div>
               </div>
             ))}
             {data.followUps.filter((f) => f.patientId === patient.id).length === 0 && <div className="text-sm text-slate-500 py-8 text-center">No follow-ups</div>}
@@ -374,25 +442,45 @@ export function PatientDetails() {
         <Card>
           <CardHeader title="Activity & amendments" />
           <div className="space-y-2 text-sm">
-            {data.auditEvents.filter((a) => {
-              // show events for this patient’s records
-              const relatedIds = [
-                patient.id,
-                ...data.opdVisits.filter((v) => v.patientId === patient.id).map((v) => v.id),
-                ...data.cancerEpisodes.filter((c) => c.patientId === patient.id).map((c) => c.id),
-                ...data.operations.filter((o) => o.patientId === patient.id).map((o) => o.id),
-              ]
-              return relatedIds.includes(a.recordId)
-            }).map((a) => (
-              <div key={a.id} className="flex justify-between gap-2 border-b border-slate-100 py-2">
-                <span className="min-w-0">{a.action} — {a.recordType} <span className="text-slate-500">{a.recordId.slice(0, 8)}</span> by {a.userName}</span>
-                <span className="text-slate-500 shrink-0 text-xs sm:text-sm">{formatDateTime(a.timestamp)}</span>
-              </div>
-            ))}
-            {data.auditEvents.filter((a) => {
-              const relatedIds = [patient.id, ...data.opdVisits.filter((v) => v.patientId === patient.id).map((v) => v.id)]
-              return relatedIds.includes(a.recordId)
-            }).length === 0 && <div className="text-slate-500 py-4 text-center">No activity yet. Amendments to finalised records will appear here.</div>}
+            {patientAuditEvents.map((a) => {
+              const parsed = parseAuditDetails(a.details)
+              const label =
+                a.recordType === 'OpdVisit' ? 'OPD visit'
+                : a.recordType === 'CancerEpisode' ? 'Cancer episode'
+                : a.recordType === 'OperationRecord' ? 'Operation'
+                : a.recordType === 'Patient' ? 'Patient'
+                : a.recordType
+              return (
+                <div key={a.id} className="border-b border-slate-100 py-2">
+                  <div className="flex justify-between gap-2">
+                    <span className="min-w-0">
+                      {a.action} — {label}
+                      {a.userName ? <> by {a.userName}</> : null}
+                    </span>
+                    <span className="text-slate-500 shrink-0 text-xs sm:text-sm">{formatDateTime(a.timestamp)}</span>
+                  </div>
+                  {parsed.reason && (
+                    <div className="text-xs text-slate-600 mt-1">
+                      <span className="font-medium">Reason:</span> {parsed.reason}
+                    </div>
+                  )}
+                  {parsed.replaced && Object.keys(parsed.replaced).length > 0 && (
+                    <div className="text-xs text-slate-500 mt-1 bg-slate-50 p-2 rounded-lg space-y-0.5">
+                      <span className="font-medium text-slate-600">Previous values:</span>
+                      {Object.entries(parsed.replaced)
+                        .filter(([, v]) => v !== null && v !== undefined && v !== '')
+                        .map(([k, v]) => (
+                          <div key={k}>
+                            <span className="text-slate-500">{k.replace(/([A-Z])/g, ' $1')}:</span>{' '}
+                            <span className="text-slate-700">{Array.isArray(v) ? v.join(', ') : String(v)}</span>
+                          </div>
+                        ))}
+                    </div>
+                  )}
+                </div>
+              )
+            })}
+            {patientAuditEvents.length === 0 && <div className="text-slate-500 py-4 text-center">No activity yet. Amendments to finalised records will appear here.</div>}
             <div className="text-xs text-slate-500 mt-4 bg-amber-100/50 backdrop-blur-md border border-amber-200/60 rounded-lg p-3">Finalised records preserve history — amendments create a new version with reason and do not silently overwrite.</div>
           </div>
         </Card>
@@ -403,6 +491,18 @@ export function PatientDetails() {
       </Modal>
       <Modal open={addOpd} onClose={() => setAddOpd(false)} title="Add OPD visit" widthClass="max-w-3xl">
         <OpdForm patientId={patient.id} onClose={() => setAddOpd(false)} />
+      </Modal>
+      <Modal open={!!editOpd} onClose={() => setEditOpd(null)} title={editOpd?.status === 'Finalised' ? 'Amend OPD visit' : 'Edit OPD visit'} widthClass="max-w-3xl">
+        {editOpd && <OpdForm visit={editOpd} onClose={() => setEditOpd(null)} />}
+      </Modal>
+      <Modal open={!!editCancer} onClose={() => setEditCancer(null)} title={editCancer?.status === 'Finalised' ? 'Amend cancer episode' : 'Edit cancer episode'} widthClass="max-w-3xl">
+        {editCancer && <CancerForm episode={editCancer} onClose={() => setEditCancer(null)} />}
+      </Modal>
+      <Modal open={!!editOt} onClose={() => setEditOt(null)} title={editOt?.status === 'Finalised' ? 'Amend operation' : 'Edit operation'} widthClass="max-w-3xl">
+        {editOt && <OtForm op={editOt} onClose={() => setEditOt(null)} />}
+      </Modal>
+      <Modal open={!!editFu} onClose={() => setEditFu(null)} title="Edit follow-up" widthClass="max-w-3xl">
+        {editFu && <FollowUpForm followUp={editFu} onClose={() => setEditFu(null)} />}
       </Modal>
       <Modal open={addCancer} onClose={() => setAddCancer(false)} title="Add cancer episode" widthClass="max-w-3xl">
         <CancerForm patientId={patient.id} onClose={() => setAddCancer(false)} />

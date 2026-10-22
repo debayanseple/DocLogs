@@ -41,14 +41,19 @@ function TestsDropdown({
     if (!el) return
     const r = el.getBoundingClientRect()
     const gap = 6
-    const maxH = Math.min(224, window.innerHeight - 32)
-    const below = window.innerHeight - r.bottom - gap - 8
-    const flip = below < 180 && r.top > window.innerHeight - r.bottom
+    const spaceBelow = window.innerHeight - r.bottom - gap - 8
+    const spaceAbove = r.top - gap - 8
+    // The panel must never cover the fields above the trigger — in the short
+    // "quick capture" modal those are the name and phone inputs the doctor
+    // has just filled in. Prefer opening downwards; flip upwards only when
+    // there is genuinely no room below.
+    const flip = spaceBelow < 120 && spaceAbove > spaceBelow
+    const maxH = Math.min(224, flip ? spaceAbove : spaceBelow)
     setPos({
       left: Math.max(8, Math.min(r.left, window.innerWidth - r.width - 8)),
       width: Math.min(r.width, window.innerWidth - 16),
       top: flip ? Math.max(8, r.top - gap - maxH) : r.bottom + gap,
-      maxH,
+      maxH: Math.max(96, maxH),
     })
   }
 

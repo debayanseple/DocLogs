@@ -9,8 +9,14 @@ import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart, Pi
 
 export function Reports() {
   const { data } = useData()
-  const [dateFrom, setDateFrom] = useState('2024-09-01')
-  const [dateTo, setDateTo] = useState(new Date().toISOString().split('T')[0])
+  // Default to the last 12 months rather than a hardcoded year, so the range
+  // is always meaningful.
+  const [dateFrom, setDateFrom] = useState(() => {
+    const d = new Date()
+    d.setFullYear(d.getFullYear() - 1)
+    return d.toISOString().slice(0, 10)
+  })
+  const [dateTo, setDateTo] = useState(new Date().toISOString().slice(0, 10))
   const [facility, setFacility] = useState('all')
 
   const facilityMap = useMemo(() => new Map(data.facilities.map((f) => [f.id, f])), [data.facilities])

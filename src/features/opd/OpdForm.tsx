@@ -39,7 +39,15 @@ export function OpdForm({ patientId: fixedPatientId, visit, onClose }: { patient
   const handleSubmit = (status: OpdVisit['status']) => {
     if (!validate()) return
     if (isFinalised && !canFinalise) return
-    const payload: Partial<OpdVisit> = { ...form, status }
+    // Amending a finalised record must capture why — the prior values are
+    // kept, but without a reason the history is not auditable.
+    let amendmentReason: string | undefined
+    if (visit && isFinalised && status === 'Amended') {
+      const reason = window.prompt('Why is this visit being amended? The previous values will be kept in the record history.')
+      if (reason === null) return
+      amendmentReason = reason.trim() || 'Amendment (no reason given)'
+    }
+    const payload: Partial<OpdVisit> = { ...form, status, amendmentReason }
     if (visit) {
       if (isFinalised && status === 'Amended') {
         updateOpdVisit(visit.id, { ...payload, updatedAt: new Date().toISOString() } as Partial<OpdVisit>)
@@ -60,6 +68,13 @@ export function OpdForm({ patientId: fixedPatientId, visit, onClose }: { patient
         visitType: (form.visitType as OpdVisit['visitType']) ?? 'New',
         chiefComplaint: form.chiefComplaint!.trim(),
         hpi: form.hpi,
+        medicalHistory: form.medicalHistory,
+        surgicalHistory: form.surgicalHistory,
+        medicationHistory: form.medicationHistory,
+        allergies: form.allergies,
+        examination: form.examination,
+        oralExamination: form.oralExamination,
+        neckExamination: form.neckExamination,
         assessment: form.assessment,
         plan: form.plan,
         investigations: form.investigations,

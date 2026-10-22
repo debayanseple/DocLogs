@@ -76,6 +76,8 @@ export interface OpdVisit {
   createdAt: string
   updatedAt: string
   amendmentHistory?: AuditEvent[]
+  /** Reason recorded when a finalised record is amended. */
+  amendmentReason?: string
 }
 
 export interface CancerEpisode {
@@ -107,6 +109,8 @@ export interface CancerEpisode {
   createdAt: string
   updatedAt: string
   amendmentHistory?: AuditEvent[]
+  /** Reason recorded when a finalised record is amended. */
+  amendmentReason?: string
 }
 
 export interface Investigation {
@@ -165,6 +169,8 @@ export interface OperationRecord {
   createdAt: string
   updatedAt: string
   amendmentHistory?: AuditEvent[]
+  /** Reason recorded when a finalised record is amended. */
+  amendmentReason?: string
 }
 
 export interface FollowUp {

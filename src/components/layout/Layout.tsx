@@ -1,22 +1,26 @@
 import { NavLink, Outlet } from 'react-router-dom'
-import { Activity } from 'lucide-react'
+import { Activity, AlertTriangle, X } from 'lucide-react'
 import {
   LayoutDashboard,
   Users,
   CalendarCheck,
+  ChartNoAxesColumn,
   User,
 } from 'lucide-react'
 import { useAuth } from '../../services/auth'
+import { useData } from '../../services/repository'
 
-export const navItems = [
+const navItems = [
   { to: '/', label: 'Home', icon: LayoutDashboard },
   { to: '/patients', label: 'Patients', icon: Users },
   { to: '/follow-ups', label: 'Follow-ups', icon: CalendarCheck },
+  { to: '/reports', label: 'Reports', icon: ChartNoAxesColumn },
   { to: '/profile', label: 'Profile', icon: User },
 ]
 
 export function Layout() {
   const { user, profileName } = useAuth()
+  const { saveError, clearSaveError } = useData()
 
   const wsName = profileName || user?.email?.split('@')[0] || 'Workspace'
 
@@ -24,6 +28,25 @@ export function Layout() {
     <div className="min-h-screen">
       {/* Ambient gradient mesh — glass needs colour behind it */}
       <div className="app-bg" aria-hidden="true" />
+
+      {/* Save failures are surfaced here — writes are optimistic, so without
+          this a failed save is indistinguishable from a successful one. */}
+      {saveError && (
+        <div className="fixed top-3 left-1/2 -translate-x-1/2 z-50 w-[calc(100%-1.5rem)] max-w-md" role="alert">
+          <div className="flex items-start gap-2.5 rounded-xl border border-red-200 bg-red-50/95 backdrop-blur-md px-3.5 py-3 shadow-lg">
+            <AlertTriangle className="w-4 h-4 text-red-600 shrink-0 mt-0.5" />
+            <p className="text-sm text-red-800 flex-1">{saveError}</p>
+            <button
+              type="button"
+              onClick={clearSaveError}
+              aria-label="Dismiss"
+              className="p-1 rounded-lg hover:bg-red-100 text-red-500 shrink-0"
+            >
+              <X className="w-3.5 h-3.5" />
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Desktop sidebar */}
       <aside className="hidden lg:flex fixed inset-y-0 left-0 w-64 glass-dark flex-col z-40 rounded-r-3xl">
@@ -49,7 +72,7 @@ export function Layout() {
 
       {/* Mobile bottom tab bar */}
       <nav className="lg:hidden fixed bottom-0 inset-x-0 z-30 glass-strong rounded-t-3xl border-x-0 border-b-0 pb-[env(safe-area-inset-bottom)]">
-        <div className="grid grid-cols-4">
+        <div className="grid grid-cols-5">
           {navItems.map((item) => (
             <NavLink
               key={item.to}

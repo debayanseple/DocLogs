@@ -23,6 +23,7 @@ export function mapPatientToDb(p: Partial<Patient> & { workspace_id: string; pat
     chief_complaint: p.chiefComplaint ?? null,
     referred_by: p.referredBy ?? null,
     tests_available: p.testsAvailable ?? [],
+    created_by: (p as { created_by?: string | null }).created_by ?? null,
   }
 }
 export function mapPatientFromDb(r: Record<string, unknown>): Patient {

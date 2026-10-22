@@ -63,8 +63,16 @@ export function OtForm({ patientId: fixedPatientId, op, onClose }: { patientId?:
   const handleSubmit = (status: OperationRecord['status']) => {
     if (!validate()) return
     if (isFinalised && !canFinalise) return
+    // Amending a finalised operation must capture why — the prior values are
+    // kept, but without a reason the history is not auditable.
+    let amendmentReason: string | undefined
+    if (op && isFinalised && status === 'Amended') {
+      const reason = window.prompt('Why is this operation being amended? The previous values will be kept in the record history.')
+      if (reason === null) return
+      amendmentReason = reason.trim() || 'Amendment (no reason given)'
+    }
     if (op) {
-      updateOperation(op.id, { ...form, status, followUpDate: reviewDate || undefined } as Partial<OperationRecord>)
+      updateOperation(op.id, { ...form, status, amendmentReason, followUpDate: reviewDate || undefined } as Partial<OperationRecord>)
       // Review date added on edit → create the follow-up only if this OT
       // doesn't already have one linked, so edits never duplicate it.
       if (reviewDate && !data.followUps.some((f) => f.relatedId === op.id)) {
@@ -90,10 +98,19 @@ export function OtForm({ patientId: fixedPatientId, op, onClose }: { patientId?:
         patientId: pid,
         facilityId: form.facilityId!,
         operationDate: form.operationDate!,
+        electiveEmergency: form.electiveEmergency,
         preOpDiagnosis: form.preOpDiagnosis || procName,
         postOpDiagnosis: form.postOpDiagnosis || form.preOpDiagnosis || procName,
         procedures: form.procedures!.filter((p) => p.name.trim()),
         primarySurgeon: form.primarySurgeon!,
+        assistants: form.assistants ?? [],
+        anaesthesiaType: form.anaesthesiaType,
+        anaesthetist: form.anaesthetist,
+        findings: form.findings,
+        reconstruction: form.reconstruction,
+        complications: form.complications,
+        outcome: form.outcome,
+        plan: form.plan,
         followUpDate: reviewDate || undefined,
         status: status as OperationRecord['status'],
         createdBy: 'Surgeon',
@@ -159,7 +176,28 @@ export function OtForm({ patientId: fixedPatientId, op, onClose }: { patientId?:
 
       {showMore && (
         <div className="space-y-3 glass-subtle rounded-xl p-4">
+          <Field label="Operating team" hint="Comma separated — e.g. Dr A Sen, Dr B Roy, Dr C Das">
+            <Input
+              value={(form.assistants ?? []).join(', ')}
+              onChange={(e) =>
+                setForm({
+                  ...form,
+                  assistants: e.target.value
+                    .split(',')
+                    .map((t) => t.trim())
+                    .filter(Boolean),
+                })
+              }
+              placeholder="Surgeon assistants and nursing team"
+            />
+          </Field>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <Field label="Anaesthesia"><Input value={form.anaesthesiaType ?? ''} onChange={(e) => setForm({ ...form, anaesthesiaType: e.target.value as OperationRecord['anaesthesiaType'] })} placeholder="General / Local / Regional" /></Field>
+            <Field label="Anaesthetist"><Input value={form.anaesthetist ?? ''} onChange={(e) => setForm({ ...form, anaesthetist: e.target.value })} placeholder="Optional" /></Field>
+          </div>
           <Field label="Findings"><Input value={form.findings ?? ''} onChange={(e) => setForm({ ...form, findings: e.target.value })} placeholder="Optional" /></Field>
+          <Field label="Outcome"><Input value={form.outcome ?? ''} onChange={(e) => setForm({ ...form, outcome: e.target.value })} placeholder="Optional" /></Field>
+          <Field label="Complications"><Input value={form.complications ?? ''} onChange={(e) => setForm({ ...form, complications: e.target.value })} placeholder="None / describe" /></Field>
           <Field label="Post-op plan"><Input value={form.plan ?? ''} onChange={(e) => setForm({ ...form, plan: e.target.value })} placeholder="NG feed, antibiotics, suture removal…" /></Field>
           <Field label="Review date" hint="Creates a follow-up automatically">
             <Input type="date" value={reviewDate} onChange={(e) => setReviewDate(e.target.value)} />
