@@ -126,6 +126,8 @@ interface DataContextValue {
   updatePatient: (id: string, patch: Partial<Patient>) => void
   addFacility: (f: Omit<Facility, 'id'>) => Facility
   updateFacility: (id: string, patch: Partial<Facility>) => void
+  /** Rename the workspace after its owner. No-op for non-owners. */
+  renameWorkspace: (name: string) => Promise<{ error: string | null }>
   addOpdVisit: (v: Omit<OpdVisit, 'id' | 'createdAt' | 'updatedAt'>) => OpdVisit
   updateOpdVisit: (id: string, patch: Partial<OpdVisit>) => void
   addCancerEpisode: (e: Omit<CancerEpisode, 'id' | 'episodeId' | 'createdAt' | 'updatedAt'>) => CancerEpisode
@@ -510,6 +512,20 @@ export function DataProvider({ children }: { children: ReactNode }) {
         }
       })
     }
+  }
+
+  const renameWorkspace: DataContextValue['renameWorkspace'] = async (name) => {
+    const trimmed = name.trim()
+    if (!trimmed || !usingSupabase || !supabase || !workspaceId) return { error: null }
+    const { error } = await supabase
+      .from('workspaces')
+      .update({ name: trimmed })
+      .eq('id', workspaceId)
+    if (error) {
+      console.error(error)
+      return { error: friendlySaveError(error.message, 'the workspace name') }
+    }
+    return { error: null }
   }
 
   const addFacility: DataContextValue['addFacility'] = (f) => {
@@ -985,6 +1001,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
     updatePatient,
     addFacility,
     updateFacility,
+    renameWorkspace,
     addOpdVisit,
     updateOpdVisit,
     addCancerEpisode,

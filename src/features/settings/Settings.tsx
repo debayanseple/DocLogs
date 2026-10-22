@@ -13,9 +13,9 @@ import type { Facility } from '../../types'
 import { SkeletonPage, Skeleton, SkeletonCard } from '../../components/ui/Skeleton'
 
 export function Settings() {
-  const { data, resetDemo, usingSupabase, addFacility, updateFacility, ready } = useData()
+  const { data, resetDemo, usingSupabase, addFacility, updateFacility, renameWorkspace, ready } = useData()
   const { role } = useRole()
-  const { user, profileName, signOut } = useAuth()
+  const { user, profileName, signOut, updateProfile } = useAuth()
   const [showReset, setShowReset] = useState(false)
   const [showTechnical, setShowTechnical] = useState(false)
   const [facilityPref, setFacilityPref] = useState(data.facilities.find((f) => f.status === 'Active')?.id ?? '')
@@ -40,6 +40,70 @@ export function Settings() {
   const [removeError, setRemoveError] = useState<string | null>(null)
   const [removing, setRemoving] = useState(false)
   const currentRoleLabel = isDoctor ? 'Doctor (Owner)' : 'Assistant'
+
+  // ── Your details (name + sign-in email) ──────────────────────────────
+  const [detailsName, setDetailsName] = useState(profileName ?? '')
+  const [detailsEmail, setDetailsEmail] = useState(user?.email ?? '')
+  const [detailsPassword, setDetailsPassword] = useState('')
+  const [detailsBusy, setDetailsBusy] = useState(false)
+  const [detailsError, setDetailsError] = useState<string | null>(null)
+  const [detailsNotice, setDetailsNotice] = useState<string | null>(null)
+  const [detailsPendingEmail, setDetailsPendingEmail] = useState<string | null>(null)
+
+  const emailChanged = detailsEmail.trim().toLowerCase() !== (user?.email ?? '').trim().toLowerCase()
+  const detailsDirty =
+    detailsName.trim() !== (profileName ?? '').trim() || emailChanged
+
+  const resetDetails = () => {
+    setDetailsName(profileName ?? '')
+    setDetailsEmail(user?.email ?? '')
+    setDetailsPassword('')
+    setDetailsError(null)
+    setDetailsNotice(null)
+  }
+
+  const handleSaveDetails = async () => {
+    if (!isSignedIn) {
+      setDetailsError('Sign in to update your details.')
+      return
+    }
+    setDetailsBusy(true)
+    setDetailsError(null)
+    setDetailsNotice(null)
+    try {
+      const { error, pendingEmail } = await updateProfile({
+        fullName: detailsName.trim(),
+        email: detailsEmail.trim(),
+        currentPassword: detailsPassword,
+      })
+      if (error) {
+        setDetailsError(error)
+        return
+      }
+      setDetailsPassword('')
+      if (pendingEmail) {
+        setDetailsPendingEmail(pendingEmail)
+        setDetailsNotice(
+          `We sent a confirmation link to ${pendingEmail}. Your sign-in email changes once you open it.`,
+        )
+      } else if (detailsName.trim() !== (profileName ?? '').trim()) {
+        setDetailsNotice('Your name has been updated.')
+      }
+      // The workspace follows its owner, so the sidebar label stays correct.
+      if (isDoctor) {
+        const renamed = await renameWorkspace(`${detailsName.trim()} Workspace`)
+        if (renamed.error) {
+          setDetailsError(
+            `Your details were saved, but the workspace label could not be updated: ${renamed.error}`,
+          )
+        }
+      }
+    } catch {
+      setDetailsError('Something went wrong. Please try again.')
+    } finally {
+      setDetailsBusy(false)
+    }
+  }
 
   const handleExportAll = () => {
     const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' })
@@ -102,6 +166,69 @@ export function Settings() {
               </div>
             )}
           </div>
+        </div>
+      </Card>
+
+      <Card>
+        <CardHeader
+          title="Your details"
+          subtitle="Your name is shown on records you create. Your email is how you sign in."
+        />
+        <div className="space-y-3 max-w-md">
+          <Field label="Full name">
+            <Input
+              value={detailsName}
+              onChange={(e) => setDetailsName(e.target.value)}
+              placeholder="Dr. Arjun Sen"
+              autoComplete="name"
+            />
+          </Field>
+          <Field
+            label="Sign-in email"
+            hint={detailsPendingEmail ? `Waiting for confirmation on ${detailsPendingEmail}` : undefined}
+          >
+            <Input
+              type="email"
+              value={detailsEmail}
+              onChange={(e) => setDetailsEmail(e.target.value)}
+              placeholder="you@example.com"
+              autoComplete="email"
+            />
+          </Field>
+          {emailChanged && (
+            <Field label="Current password" hint="Required to change the sign-in email">
+              <Input
+                type="password"
+                value={detailsPassword}
+                onChange={(e) => setDetailsPassword(e.target.value)}
+                placeholder="••••••••"
+                autoComplete="current-password"
+              />
+            </Field>
+          )}
+          <div className="flex flex-wrap items-center gap-2 pt-1">
+            <Button
+              onClick={handleSaveDetails}
+              disabled={detailsBusy || !detailsDirty}
+            >
+              {detailsBusy ? 'Saving…' : 'Save changes'}
+            </Button>
+            {detailsDirty && (
+              <Button variant="ghost" onClick={resetDetails} disabled={detailsBusy}>
+                Cancel
+              </Button>
+            )}
+          </div>
+          {detailsError && (
+            <div role="alert" className="text-sm p-2 rounded-lg border border-red-200 bg-red-50 text-red-700">
+              {detailsError}
+            </div>
+          )}
+          {detailsNotice && (
+            <div role="status" className="text-sm p-2 rounded-lg border border-emerald-200 bg-emerald-50 text-emerald-700">
+              {detailsNotice}
+            </div>
+          )}
         </div>
       </Card>
 
