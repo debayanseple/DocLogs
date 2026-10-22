@@ -19,28 +19,6 @@ export function formatDateTime(dateStr?: string): string {
   })
 }
 
-export function isOverdue(dueDate: string): boolean {
-  const d = new Date(dueDate)
-  const today = new Date()
-  today.setHours(0, 0, 0, 0)
-  return d < today
-}
-
-export function isToday(dateStr: string): boolean {
-  const d = new Date(dateStr)
-  const today = new Date()
-  return d.toDateString() === today.toDateString()
-}
-
-export function daysFromNow(dateStr: string): number {
-  const d = new Date(dateStr)
-  const today = new Date()
-  today.setHours(0, 0, 0, 0)
-  d.setHours(0, 0, 0, 0)
-  const diff = d.getTime() - today.getTime()
-  return Math.round(diff / (1000 * 60 * 60 * 24))
-}
-
 export function calculateAge(dob?: string): number | undefined {
   if (!dob) return undefined
   const birth = new Date(dob)

@@ -1,8 +1,8 @@
-# ClinicaLog OMFS — Prototype
+# ClinicaLog OMFS
 
-A polished **frontend MVP** for **ClinicaLog OMFS**, a private clinical record and workflow app for an Oral & Maxillofacial Surgeon (OMFS) specialising in Head & Neck Oncology. Built with **React + TypeScript + Vite + Tailwind CSS + React Router + Lucide + Recharts**. Data is stored in a **mock repository layer** backed by `localStorage` for demo purposes — not secure for real patient data.
+A private clinical record and workflow app for an Oral & Maxillofacial Surgeon (OMFS) specialising in Head & Neck Oncology. Built with **React 19 + TypeScript + Vite + Tailwind CSS v4 + React Router 7 + Lucide + Recharts**, backed by **Supabase** (Postgres + Auth + Row Level Security).
 
-> **All patients and clinical data are synthetic.** Do not use this prototype for real clinical documentation.
+> **All patients and clinical data in this project are synthetic.** The app is not yet certified for real clinical documentation — see [Not production-ready](#not-production-ready).
 
 ---
 
@@ -13,8 +13,9 @@ A polished **frontend MVP** for **ClinicaLog OMFS**, a private clinical record a
 - React Router 7
 - Lucide React icons
 - Recharts (charts only where they add value)
+- Supabase — Postgres, Auth (email + password), RLS, Storage (documents, not yet wired)
 
-No backend, database, auth provider, ORM or complex infra in this pass. Data access is behind a small `services/repository.tsx` layer so a secure backend can be connected later without rewriting the UI.
+Data access sits behind a single `services/repository.tsx` layer, so the UI never talks to Supabase directly.
 
 ---
 
@@ -22,100 +23,114 @@ No backend, database, auth provider, ORM or complex infra in this pass. Data acc
 
 ```bash
 npm install
-npm run dev      # start dev server (default http://localhost:5173)
-npm run build    # type-check + production build
-npm run preview  # preview the production build
+cp .env.example .env    # then fill in your Supabase project URL + publishable key
+npm run dev             # http://localhost:5173
+```
+
+```bash
+npm run build           # type-check + production build
+npm run preview         # preview the production build
+npm run lint            # oxlint
 ```
 
 Requires Node 18+.
 
+### Database setup
+
+```bash
+# 1. Apply the schema (creates all tables, indexes and RLS policies)
+#    Supabase Dashboard → SQL Editor → paste supabase/schema.sql
+#
+# 2. Apply the migrations in order (each is idempotent)
+#    supabase/migrations/20261015_patient_intake_fields.sql
+#    supabase/migrations/20261022_workspace_bootstrap_rls.sql
+#    supabase/migrations/20261022_enforce_client_invariants.sql
+#    supabase/migrations/20261022_fix_rls_recursion.sql
+```
+
+Email confirmation is on by default in Supabase. Until an address is confirmed, sign-in is refused — confirm users from **Authentication → Users**, or turn on auto-confirm for local development.
+
 ---
 
-## Demo roles (UI only)
+## Routes
 
-Use the **role switcher** in the top bar (or Settings) to toggle:
+| Route | Purpose |
+|---|---|
+| `/` | Dashboard — stat cards, OPD activity, cancer-by-site, upcoming follow-ups, recent activity |
+| `/patients` | Patient register — search, facility filter, pagination, add/edit, duplicate warning, CSV import/export, clear list |
+| `/patients/:id` | Patient profile — unified chronological timeline + tabs (Overview / OPD / Cancer / Operations / Investigations / Follow-ups / Documents / Activity) |
+| `/follow-ups` | Worklist — All / Due / Upcoming / Overdue / Completed, with complete · reschedule · cancel + CSV export |
+| `/reports` | Date-range + facility filters, activity charts, CSV exports for OPD / OT / cancer / follow-ups / patients |
+| `/profile` | Profile, role, assistant management, facilities, preferences & data export |
 
-- **Assistant** — can create/edit **Draft** and **Pending Review** records, cannot finalise or sign as the surgeon.
-- **Surgeon (Dr. Arjun Sen)** — can review pending records and **Finalise**; can also create/edit.
-
-This is a clearly labelled demo switcher. **Production RBAC must be enforced on the server.** Finalised records show status, author and amendment history; amendments preserve prior values (prototype simulation — not a legally reliable audit trail).
+`/opd`, `/ot`, `/cancer-registry`, `/facilities` and `/settings` are **legacy URLs** that redirect into the merged navigation above. The OPD, cancer and OT registers were folded into the patient profile; their search, filter and export capability lives in `/reports`.
 
 ---
 
-## What was built
+## Roles
 
-### Navigation (10 routes)
+- **Doctor (Owner)** — owns the workspace, can add one assistant, finalise and amend records.
+- **Assistant** — a member of the doctor's workspace. Can create and edit drafts; cannot finalise, cannot manage the assistant, cannot see workspace settings.
 
-- `/` — Dashboard
-- `/patients` — Patient register (search, filter, pagination, add/edit, duplicate warning, CSV export)
-- `/patients/:id` — Patient profile with unified chronological timeline across facilities + tabs (Overview / OPD / Cancer / Operations / Investigations / Follow-ups / Documents / Activity)
-- `/opd` — OPD Register + add/edit form with draft → pending review → finalised → amended workflow
-- `/cancer-registry` — Cancer episode register (site, subsite, laterality, staging system/edition, T/N/M, stage group) — fields are clinician-entered only, no inference
-- `/ot` — OT / Operation register (multiple procedures & team members, facility, anaesthesia, specimens, outcome)
-- `/follow-ups` — Worklist (Due/Upcoming/Overdue/Completed) with complete / reschedule / cancel + confirmation
-- `/reports` — Date-range + facility filters, charts (OPD over time, operations by facility, cancer by site), follow-up counts, CSV exports
-- `/facilities` — Facility list + add/edit (OPD Centre / Hospital / Clinic, Active/Inactive)
-- `/settings` — Role switcher, profile, facility preference, JSON + CSV export, demo-data reset with confirmation, privacy notice
+The role is read from `workspace_members.role` and enforced in the UI; the workspace boundary itself is enforced by RLS. A doctor invites an assistant by email from **Profile → Assistant**; when that person signs up with the invited address they join the doctor's workspace rather than creating one of their own.
 
-### Key product rules satisfied
+---
 
-- **One patient ID** across all facilities; encounters record their facility + date; patient timeline merges OPD, cancer, OT, investigations, follow-ups chronologically.
-- Synthetic patients across **3 active facilities** (Park Street OPD, Salt Lake Hospital, South Kolkata Clinic) + linked records to demonstrate multi-facility workflows.
-- Draft / Pending Review / Finalised / Amended lifecycle with role gating and amendment history.
-- Clinical vs pathological staging distinguished; staging system + edition stored explicitly; no auto-calculation.
-- CSV exports (patients, OPD, OT, cancer, follow-ups) with proper escaping; filtered exports in Reports.
-- Global patient search in top bar; search/filter/sort everywhere.
-- Persistent **Demo data** banner + prototype limitation footer.
-- Responsive desktop-first layout with persistent sidebar (collapsible on mobile), cards/tables/tabs/badges/modals/drawers/empty states.
-
-### Data model (`src/types/index.ts`)
+## Data model (`src/types/index.ts`)
 
 `Patient`, `Facility`, `User`, `OpdVisit`, `CancerEpisode`, `Investigation`, `PathologyReport`, `OperationRecord`, `FollowUp`, `DocumentReference`, `AuditEvent`, `TimelineEvent`.
 
-Relationships: patient → many OPD / cancer episodes / operations / follow-ups; each encounter → facility; cancer episode → investigations/pathology/MDT/treatment; operation → multiple procedures + team members + specimens.
+Relationships: patient → many OPD / cancer episodes / operations / follow-ups; each encounter records its facility + date; cancer episode → investigations / pathology / MDT / treatment; operation → multiple procedures + team members + specimens.
 
 ### Project structure
 
 ```
 src/
   app/App.tsx, router.tsx
-  components/layout/ (Sidebar, Topbar, Layout)
-  components/ui/ (Badge, Button, Card, Input, Modal)
+  components/layout/ (Layout with sidebar + mobile tab bar)
+  components/ui/ (Badge, Button, Card, Input, Modal, FilterChip, Skeleton)
   features/
     dashboard/
     patients/ (+ PatientForm, PatientDetails)
-    opd/ (OpdRegister, OpdForm)
-    cancer-registry/ (CancerRegistry, CancerForm)
-    ot/ (OtRegister, OtForm)
+    opd/ (OpdForm)
+    cancer-registry/ (CancerForm)
+    ot/ (OtForm)
     follow-ups/ (FollowUps, FollowUpForm)
-    reports/
-    facilities/
-    settings/
-  data/seedData.ts
-  services/repository.tsx (mock repo + localStorage)
-  services/role.tsx
+    reports/ (Reports)
+    settings/ (Settings)
+  lib/supabase.ts          # client + config flag
+  services/
+    auth.tsx               # Supabase auth session
+    repository.tsx         # the only data-access layer
+    role.tsx               # role derived from workspace_members
+    supabaseMappers.ts     # snake_case DB rows <-> camelCase app types
   types/index.ts
-  utils/csv.ts, dates.ts
+  utils/csv.ts, dates.ts, errors.ts
+supabase/
+  schema.sql               # full schema + RLS policies
+  migrations/              # incremental, idempotent fixes
 ```
 
 ---
 
-## Commands run & result
+## Key product rules
 
-- `npm install` — ok
-- `npm install react-router-dom lucide-react recharts` — ok
-- `npm install -D tailwindcss @tailwindcss/vite` — ok
-- `npm run build` (`tsc -b && vite build`) — **passed** (852 kB bundle, gzip 241 kB; chunk-size warning is advisory)
-- No test suite in template; manual route verification via build.
+- **One patient ID** across all facilities; encounters record their facility + date; the patient timeline merges OPD, cancer, OT, investigations and follow-ups chronologically.
+- Draft / Pending Review / Finalised / Amended lifecycle. Amending a finalised record asks for a reason and writes the replaced values to the audit log.
+- Clinical vs pathological staging distinguished; staging system + edition stored explicitly; **no auto-calculation** — every field is clinician-entered.
+- CSV export (patients, follow-ups) and CSV import of a patient list.
+- Search and filter everywhere; persistent sidebar on desktop, bottom tab bar on mobile.
+- Every write is optimistic locally but confirmed against the database — a failed write raises a visible banner rather than silently disappearing.
 
 ---
 
-## Remaining / not in prototype
+## Not production-ready
 
-- No real backend, auth, RLS, tenant isolation, encryption, private document storage, or backup verification — all listed in Settings as required for production.
-- No automatic staging, decision support, HIS/PACS integration, billing, or native apps (out of MVP scope).
-- `localStorage` persistence is demo-only; do not use for clinical data.
-- Charts use synthetic or filtered real counts; not a replacement for official registries.
+- The client talks to Supabase with the publishable key directly. RLS is the only server-side boundary; there is no API layer, no Edge Functions, no server-side validation.
+- Document storage, encryption-at-rest, backup/restore, and audit-trail export for regulators are **not** implemented. The Documents tab is a placeholder.
+- `created_by` / `updated_by` are recorded, but there is no legally reliable audit trail — the audit log is a convenience record, not a regulatory one.
+- No HIPAA/DPDP compliance review, no data-processing agreements, no retention policy.
+- Charts are derived from the workspace's own counts; they are not a substitute for an official cancer registry.
 
 ---
 
@@ -126,8 +141,8 @@ npm run dev
 # open http://localhost:5173
 ```
 
-To reset synthetic data: **Settings → Reset demo dataset** (with confirmation) or clear `localStorage` key `clinicalog_demo_v1`.
+Sign up with any address, then confirm it in **Supabase → Authentication → Users** (or enable auto-confirm).
 
 ---
 
-*Built from `ClinicaLog_OMFS_OpenCode_Build_Prompt.md` + `ClinicaLog_OMFS_MVP_PRD.md`.*
+*Built to `ClinicaLog_OMFS_MVP_PRD.md`.*

@@ -20,13 +20,3 @@ export function exportToCsv(filename: string, headers: string[], rows: (string |
   document.body.removeChild(a)
   URL.revokeObjectURL(url)
 }
-
-export function toCsvAndDownload<T extends Record<string, unknown>>(
-  filename: string,
-  data: T[],
-  columns: { key: keyof T; header: string }[]
-) {
-  const headers = columns.map((c) => c.header)
-  const rows = data.map((row) => columns.map((c) => row[c.key] as string | number | null | undefined))
-  exportToCsv(filename, headers, rows)
-}

@@ -9,14 +9,6 @@ export type VisitType = 'New' | 'Follow-up' | 'Review' | 'Emergency'
 export type Laterality = 'Left' | 'Right' | 'Bilateral' | 'Midline' | 'Not applicable' | 'Unknown'
 export type AnaesthesiaType = 'General' | 'Local' | 'Regional' | 'Sedation' | 'Not recorded'
 
-export interface User {
-  id: string
-  name: string
-  role: 'Assistant' | 'Surgeon'
-  email: string
-  avatarInitials: string
-}
-
 export interface Facility {
   id: string
   name: string
@@ -187,18 +179,6 @@ export interface FollowUp {
   notes?: string
   createdAt: string
   updatedAt: string
-}
-
-export interface DocumentReference {
-  id: string
-  patientId: string
-  relatedId?: string
-  relatedType?: string
-  fileName: string
-  documentType: string
-  storageKey: string
-  uploadedAt: string
-  uploadedBy: string
 }
 
 export interface AuditEvent {

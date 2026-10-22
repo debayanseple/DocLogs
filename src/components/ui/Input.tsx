@@ -54,7 +54,7 @@ export function Select({
   )
 }
 
-export function Label({
+function Label({
   children,
   required,
 }: {

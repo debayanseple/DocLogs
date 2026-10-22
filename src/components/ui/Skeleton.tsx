@@ -14,7 +14,7 @@ export function Skeleton({
   return <div className={`skeleton ${className}`} style={style} aria-hidden="true" />
 }
 
-export function SkeletonText({
+function SkeletonText({
   lines = 3,
   className = '',
 }: {
@@ -79,7 +79,7 @@ export function SkeletonTable({
       <div className="divide-y divide-white/50">
         {Array.from({ length: rows }).map((_, r) => (
           <div key={r} className="px-4 py-3.5 flex gap-4 items-center">
-            {Array.from({ length: cols }).map((_, c) => (
+            {Array.from({ length: cols }).map((_unused, c) => (
               <Skeleton
                 key={c}
                 className={`h-3 flex-1 ${c === 0 ? 'max-w-[80px]' : ''}`}

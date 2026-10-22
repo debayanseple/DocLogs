@@ -20,13 +20,6 @@ supabase/.temp
 
 # Internal source docs (kept on disk, not in the repo)
 ClinicaLog_OMFS_MVP_PRD.md
-ClinicaLog_OMFS_OpenCode_Build_Prompt.md
-
-# Agent tooling installed via `npx skills add` — re-installable, not project code
-.agents/
-agent/
-.claude/
-skills-lock.json
 
 # Editor directories and files
 .vscode/*
