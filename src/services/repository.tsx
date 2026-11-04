@@ -139,7 +139,7 @@ interface DataContextValue {
   updateFollowUp: (id: string, patch: Partial<FollowUp>) => void
   addAudit: (a: Omit<AuditEvent, 'id' | 'timestamp'>) => void
   resetDemo: () => void
-  clearPatients: () => Promise<void>
+  clearPatients: () => Promise<{ error: string | null }>
   findDuplicates: (name: string, dob?: string, phone?: string, excludeId?: string) => Patient[]
   refresh: () => Promise<void>
   addAssistant: (email: string, fullName: string) => Promise<{ error: string | null }>
@@ -979,8 +979,20 @@ export function DataProvider({ children }: { children: ReactNode }) {
         // put the list back so the UI matches the database
         const { data: remaining } = await supabase.from('patients').select('*').eq('workspace_id', workspaceId)
         setData((prev) => ({ ...prev, patients: (remaining ?? []).map((r) => mapPatientFromDb(r as Record<string, unknown>)) }))
+        return { error: friendlySaveError(error.message, 'the patient list') }
       }
+      setData((prev) => ({
+        ...prev,
+        patients: [],
+        opdVisits: [],
+        cancerEpisodes: [],
+        operations: [],
+        followUps: [],
+        investigations: [],
+        pathology: [],
+      }))
     }
+    return { error: null }
   }
 
   const findDuplicates: DataContextValue['findDuplicates'] = (name, dob, phone, excludeId) => {

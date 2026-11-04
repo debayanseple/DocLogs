@@ -22,7 +22,7 @@ import {
 import type { Patient } from '../../types'
 
 export function Patients() {
-  const { data, addPatient, clearPatients, ready } = useData()
+  const { data, addPatient, clearPatients, usingSupabase, ready } = useData()
   const [q, setQ] = useState('')
   const [facility, setFacility] = useState('all')
   const [page, setPage] = useState(1)
@@ -274,16 +274,19 @@ export function Patients() {
                   Import expects a CSV with a Name column
                 </div>
                 <button
-                  onClick={() => {
+                  onClick={async () => {
                     if (data.patients.length === 0) { setMenuOpen(false); return }
-                    if (!confirm(`Remove all ${data.patients.length} patients from the list? Their visits and records will be kept.`)) return
-                    clearPatients()
+                    const confirmation = usingSupabase
+                      ? `Delete all ${data.patients.length} patients and their linked clinical records? This cannot be undone.`
+                      : `Remove all ${data.patients.length} patients from the list? Local visits and records will remain.`
+                    if (!confirm(confirmation)) return
+                    const result = await clearPatients()
                     setMenuOpen(false)
-                    setImportMsg('Patient list cleared.')
+                    if (!result.error) setImportMsg(usingSupabase ? 'Patients and linked clinical records deleted.' : 'Patient list cleared.')
                   }}
                   className="w-full flex items-center gap-2.5 px-3.5 py-2 text-sm text-red-600 hover:bg-red-50 rounded-xl mx-1"
                 >
-                  <Trash2 className="w-4 h-4" /> Clear patient list
+                  <Trash2 className="w-4 h-4" /> Delete all patients
                 </button>
               </div>
             )}
