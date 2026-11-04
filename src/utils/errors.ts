@@ -17,6 +17,15 @@ export function friendlyAuthError(raw: unknown): string {
     return 'Please verify your email first, then sign in.';
   if (msg.includes('user already registered') || msg.includes('already exists') || msg.includes('duplicate'))
     return 'An account with this email already exists. Please sign in instead.';
+  if (
+    msg.includes('signups not allowed') ||
+    msg.includes('signup is disabled') ||
+    msg.includes('sign up is disabled') ||
+    msg.includes('user_signup_disabled')
+  )
+    return 'New account creation is currently disabled. Please contact the workspace administrator.';
+  if (msg.includes('database error saving new user') || msg.includes('error creating user'))
+    return 'The account could not be created because of a server setup error. Please contact the workspace administrator.';
   if (msg.includes('password') && (msg.includes('short') || msg.includes('6 characters') || msg.includes('weak')))
     return 'Password must be at least 6 characters.';
   if (msg.includes('invalid email') || msg.includes('email address'))

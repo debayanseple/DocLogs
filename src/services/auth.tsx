@@ -7,8 +7,11 @@ interface AuthCtx {
   user: User | null
   session: Session | null
   loading: boolean
+  isPasswordRecovery: boolean
   signIn: (email: string, password: string) => Promise<{ error: string | null }>
   signUp: (email: string, password: string, fullName?: string) => Promise<{ error: string | null }>
+  sendPasswordReset: (email: string) => Promise<{ error: string | null }>
+  updatePassword: (password: string) => Promise<{ error: string | null }>
   signOut: () => Promise<void>
   isConfigured: boolean
   profileName: string | null
@@ -33,6 +36,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null)
   const [session, setSession] = useState<Session | null>(null)
   const [loading, setLoading] = useState(true)
+  const [isPasswordRecovery, setIsPasswordRecovery] = useState(() => {
+    if (typeof window === 'undefined') return false
+    const url = new URL(window.location.href)
+    return url.searchParams.get('type') === 'recovery' ||
+      new URLSearchParams(url.hash.slice(1)).get('type') === 'recovery'
+  })
 
   useEffect(() => {
     if (!isSupabaseConfigured || !supabase) {
@@ -44,9 +53,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setUser(data.session?.user ?? null)
       setLoading(false)
     })
-    const { data: sub } = supabase.auth.onAuthStateChange((_e, s) => {
+    const { data: sub } = supabase.auth.onAuthStateChange((event, s) => {
       setSession(s)
       setUser(s?.user ?? null)
+      if (event === 'PASSWORD_RECOVERY') setIsPasswordRecovery(true)
     })
     return () => sub.subscription.unsubscribe()
   }, [])
@@ -68,13 +78,46 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         password,
         options: { data: { full_name: fullName?.trim() || null, display_name: fullName?.trim() || null } },
       })
+      if (error && import.meta.env.DEV) {
+        // Keep diagnostics useful without logging the submitted email or password.
+        console.error('[auth] Sign-up failed', {
+          code: error.code,
+          status: error.status,
+          message: error.message,
+        })
+      }
       return { error: error ? friendlyAuthError(error.message) : null }
-    } catch {
-      return { error: friendlyAuthError('network') }
+    } catch (error) {
+      if (import.meta.env.DEV) console.error('[auth] Sign-up request threw an exception', error)
+      return { error: friendlyAuthError(error) }
+    }
+  }
+  const sendPasswordReset: AuthCtx['sendPasswordReset'] = async (email) => {
+    if (!supabase) return { error: 'Password reset is currently unavailable. Please try again later.' }
+    try {
+      const { error } = await supabase.auth.resetPasswordForEmail(email, {
+        redirectTo: window.location.origin,
+      })
+      return { error: error ? friendlyAuthError(error.message) : null }
+    } catch (error) {
+      return { error: friendlyAuthError(error) }
+    }
+  }
+  const updatePassword: AuthCtx['updatePassword'] = async (password) => {
+    if (!supabase) return { error: 'Password update is currently unavailable. Please try again later.' }
+    try {
+      const { error } = await supabase.auth.updateUser({ password })
+      if (error) return { error: friendlyAuthError(error.message) }
+      setIsPasswordRecovery(false)
+      window.history.replaceState(null, '', window.location.pathname + window.location.search)
+      return { error: null }
+    } catch (error) {
+      return { error: friendlyAuthError(error) }
     }
   }
   const signOut = async () => {
     if (supabase) await supabase.auth.signOut()
+    setIsPasswordRecovery(false)
   }
 
   const updateProfile: AuthCtx['updateProfile'] = async ({ fullName, email, currentPassword }) => {
@@ -143,8 +186,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         user,
         session,
         loading,
+        isPasswordRecovery,
         signIn,
         signUp,
+        sendPasswordReset,
+        updatePassword,
         signOut,
         isConfigured: isSupabaseConfigured,
         profileName,
