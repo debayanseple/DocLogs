@@ -12,6 +12,10 @@ import { Plus, Download, Search, Edit2, Check, X, Calendar } from 'lucide-react'
 import { FilterChip } from '../../components/ui/FilterChip'
 import { SkeletonPage, SkeletonToolbar, SkeletonTable, SkeletonList, Skeleton } from '../../components/ui/Skeleton'
 
+const formatPaymentDue = (amount?: number) => amount == null
+  ? '—'
+  : new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 2 }).format(amount)
+
 export function FollowUps() {
   const { data, updateFollowUp, ready } = useData()
   const [q, setQ] = useState('')
@@ -33,7 +37,7 @@ export function FollowUps() {
     if (facility !== 'all') list = list.filter((f) => f.facilityId === facility)
     if (q.trim()) {
       const v = q.toLowerCase()
-      list = list.filter((f) => f.reason.toLowerCase().includes(v) || patientMap.get(f.patientId)?.name.toLowerCase().includes(v))
+      list = list.filter((f) => f.reason.toLowerCase().includes(v) || String(f.paymentDue ?? '').includes(v) || patientMap.get(f.patientId)?.name.toLowerCase().includes(v))
     }
     return list.sort((a, b) => +new Date(a.dueDate) - +new Date(b.dueDate))
   }, [data.followUps, tab, facility, q, patientMap])
@@ -44,8 +48,8 @@ export function FollowUps() {
   }
 
   const handleExport = () => {
-    const rows = filtered.map((f) => [f.id.slice(0, 8), patientMap.get(f.patientId)?.patientNumber ?? '', patientMap.get(f.patientId)?.name ?? '', f.reason, formatDate(f.dueDate), facilityMap.get(f.facilityId ?? '')?.name ?? '', f.assignedTo ?? '', f.status])
-    exportToCsv(`followups-${new Date().toISOString().slice(0, 10)}.csv`, ['ID', 'Patient ID', 'Patient', 'Reason', 'Due date', 'Facility', 'Assigned', 'Status'], rows)
+    const rows = filtered.map((f) => [f.id.slice(0, 8), patientMap.get(f.patientId)?.patientNumber ?? '', patientMap.get(f.patientId)?.name ?? '', f.reason, f.paymentDue ?? '', formatDate(f.dueDate), facilityMap.get(f.facilityId ?? '')?.name ?? '', f.assignedTo ?? '', f.status])
+    exportToCsv(`followups-${new Date().toISOString().slice(0, 10)}.csv`, ['ID', 'Patient ID', 'Patient', 'Reason', 'Payment due (INR)', 'Due date', 'Facility', 'Assigned', 'Status'], rows)
   }
 
   const counts = {
@@ -114,6 +118,7 @@ export function FollowUps() {
               <tr className="text-left text-slate-500">
                 <th className="px-4 py-3 font-medium">Patient</th>
                 <th className="px-4 py-3 font-medium">Reason</th>
+                <th className="px-4 py-3 font-medium">Payment due</th>
                 <th className="px-4 py-3 font-medium">Due date</th>
                 <th className="px-4 py-3 font-medium">Facility</th>
                 <th className="px-4 py-3 font-medium">Assigned</th>
@@ -122,13 +127,14 @@ export function FollowUps() {
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
-              {filtered.length === 0 ? <tr><td colSpan={7} className="px-4 py-12 text-center text-slate-500">No follow-ups in this view</td></tr> : filtered.map((f) => (
+              {filtered.length === 0 ? <tr><td colSpan={8} className="px-4 py-12 text-center text-slate-500">No follow-ups in this view</td></tr> : filtered.map((f) => (
                 <tr key={f.id} className="hover:bg-white/50">
                   <td className="px-4 py-3">
                     <div className="font-medium text-slate-900">{patientMap.get(f.patientId)?.name}</div>
                     <div className="text-xs text-slate-500 font-mono">{patientMap.get(f.patientId)?.patientNumber}</div>
                   </td>
-                  <td className="px-4 py-3 max-w-[260px] truncate" title={f.reason}>{f.reason}</td>
+                  <td className="px-4 py-3 max-w-[260px] truncate" title={f.reason}>{f.reason || '—'}</td>
+                  <td className="px-4 py-3 whitespace-nowrap">{formatPaymentDue(f.paymentDue)}</td>
                   <td className="px-4 py-3 whitespace-nowrap">
                     <span className="inline-flex items-center gap-1"><Calendar className="w-3.5 h-3.5 text-slate-400" />{formatDate(f.dueDate)}</span>
                     {f.completedDate && <span className="text-xs text-slate-500 ml-2">Done {formatDate(f.completedDate)}</span>}
@@ -162,7 +168,8 @@ export function FollowUps() {
                 </div>
                 <StatusBadge status={f.status} />
               </div>
-              <div className="text-sm text-slate-700 mt-1.5">{f.reason}</div>
+              {f.reason && <div className="text-sm text-slate-700 mt-1.5">{f.reason}</div>}
+              {f.paymentDue != null && <div className="text-sm text-slate-700 mt-1.5">Payment due: {formatPaymentDue(f.paymentDue)}</div>}
               <div className="text-xs text-slate-500 mt-1 flex flex-wrap items-center gap-x-2">
                 <span className="inline-flex items-center gap-1">
                   <Calendar className="w-3.5 h-3.5" /> {formatDate(f.dueDate)}

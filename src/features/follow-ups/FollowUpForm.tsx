@@ -17,7 +17,12 @@ export function FollowUpForm({ patientId: fixedPatientId, followUp, onClose }: {
   const [errors, setErrors] = useState<Record<string, string>>({})
   const validate = () => {
     const e: Record<string, string> = {}
-    if (!form.reason?.trim()) e.reason = 'Reason?'
+    const hasReason = !!form.reason?.trim()
+    const hasPaymentDue = form.paymentDue !== undefined && form.paymentDue !== null
+    if (!hasReason && !hasPaymentDue) e.details = 'Enter a reason or payment due amount.'
+    if (hasPaymentDue && (!Number.isFinite(form.paymentDue) || form.paymentDue! < 0)) {
+      e.paymentDue = 'Payment due must be zero or more.'
+    }
     if (!form.dueDate) e.dueDate = 'Date required'
     setErrors(e)
     return Object.keys(e).length === 0
@@ -25,8 +30,14 @@ export function FollowUpForm({ patientId: fixedPatientId, followUp, onClose }: {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
     if (!validate()) return
-    if (followUp) updateFollowUp(followUp.id, { ...form, updatedAt: new Date().toISOString() } as Partial<FollowUp>)
-    else addFollowUp({ patientId: form.patientId!, dueDate: form.dueDate!, reason: form.reason!.trim(), status: (form.status as FollowUp['status']) ?? 'Upcoming' } as never)
+    const followUpData = {
+      ...form,
+      reason: form.reason?.trim() ?? '',
+      paymentDue: form.paymentDue ?? undefined,
+      updatedAt: new Date().toISOString(),
+    }
+    if (followUp) updateFollowUp(followUp.id, followUpData as Partial<FollowUp>)
+    else addFollowUp({ ...followUpData, patientId: form.patientId!, dueDate: form.dueDate!, status: (form.status as FollowUp['status']) ?? 'Upcoming' } as never)
     onClose()
   }
   return (
@@ -41,9 +52,24 @@ export function FollowUpForm({ patientId: fixedPatientId, followUp, onClose }: {
       )}
       <div className="bg-amber-100/40 backdrop-blur-md border border-amber-200/50 rounded-xl p-4 space-y-3">
         <div className="text-xs font-semibold tracking-widest text-amber-700">FOLLOW-UP IN 10 SECONDS</div>
-        <Field label="Reason" required error={errors.reason}>
-          <Input value={form.reason ?? ''} onChange={(e) => setForm({ ...form, reason: e.target.value })} placeholder="e.g. Suture removal" autoFocus />
+        <Field label="Reason">
+          <Input value={form.reason ?? ''} onChange={(e) => { setForm({ ...form, reason: e.target.value }); setErrors({}) }} placeholder="e.g. Suture removal" autoFocus />
         </Field>
+        <Field label="Payment due (₹)" error={errors.paymentDue}>
+          <Input
+            type="number"
+            min="0"
+            step="0.01"
+            value={form.paymentDue ?? ''}
+            onChange={(e) => {
+              const value = e.target.value
+              setForm({ ...form, paymentDue: value === '' ? undefined : Number(value) })
+              setErrors({})
+            }}
+            placeholder="Optional"
+          />
+        </Field>
+        {errors.details && <p role="alert" className="text-xs text-red-600">{errors.details}</p>}
         <Field label="Due date" required error={errors.dueDate}>
           <Input type="date" value={form.dueDate ?? ''} onChange={(e) => setForm({ ...form, dueDate: e.target.value })} />
         </Field>

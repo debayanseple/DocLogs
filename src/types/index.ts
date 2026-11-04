@@ -173,6 +173,7 @@ export interface FollowUp {
   dueDate: string
   completedDate?: string
   reason: string
+  paymentDue?: number
   facilityId?: string
   assignedTo?: string
   status: FollowUpStatus

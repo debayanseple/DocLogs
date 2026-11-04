@@ -412,7 +412,11 @@ export function PatientDetails() {
             {data.followUps.filter((f) => f.patientId === patient.id).sort((a, b) => +new Date(a.dueDate) - +new Date(b.dueDate)).map((fu) => (
               <div key={fu.id} className="glass-subtle rounded-xl p-3 flex items-center justify-between gap-2">
                 <div className="min-w-0">
-                  <div className="text-sm font-medium">{fu.reason} · {formatDate(fu.dueDate)}</div>
+                  <div className="text-sm font-medium">
+                    {fu.reason || 'Follow-up'}
+                    {fu.paymentDue != null && ` · Payment due ₹${fu.paymentDue.toLocaleString('en-IN', { maximumFractionDigits: 2 })}`}
+                    {' · '}{formatDate(fu.dueDate)}
+                  </div>
                   <div className="text-xs text-slate-500">{facilityMap.get(fu.facilityId ?? '')?.name ?? '—'} · {fu.assignedTo ?? '—'}</div>
                 </div>
                 <div className="flex items-center gap-2 shrink-0">

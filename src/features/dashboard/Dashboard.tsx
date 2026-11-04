@@ -230,7 +230,11 @@ export function Dashboard() {
                   <div key={fu.id} className="flex items-center justify-between py-3">
                     <div>
                       <div className="text-sm font-medium text-slate-900">{p?.name ?? '—'} <span className="text-slate-400 font-normal">· {p?.patientNumber}</span></div>
-                      <div className="text-xs text-slate-500">{fu.reason} · {facilityMap.get(fu.facilityId ?? '')?.name ?? '—'} · {formatDate(fu.dueDate)}</div>
+                      <div className="text-xs text-slate-500">
+                        {fu.reason || 'Follow-up'}
+                        {fu.paymentDue != null && ` · Payment due ₹${fu.paymentDue.toLocaleString('en-IN', { maximumFractionDigits: 2 })}`}
+                        {' · '}{facilityMap.get(fu.facilityId ?? '')?.name ?? '—'} · {formatDate(fu.dueDate)}
+                      </div>
                     </div>
                     <StatusBadge status={fu.status} />
                   </div>

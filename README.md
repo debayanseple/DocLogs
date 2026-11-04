@@ -46,6 +46,7 @@ Requires Node 18+.
 #    supabase/migrations/20261022_workspace_bootstrap_rls.sql
 #    supabase/migrations/20261022_enforce_client_invariants.sql
 #    supabase/migrations/20261022_fix_rls_recursion.sql
+#    supabase/migrations/20261104_follow_up_payment_due.sql
 ```
 
 Email confirmation is on by default in Supabase. Until an address is confirmed, sign-in is refused — confirm users from **Authentication → Users**, or turn on auto-confirm for local development.

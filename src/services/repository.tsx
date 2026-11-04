@@ -880,6 +880,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
       if (patch.dueDate !== undefined) dbPatch.due_date = patch.dueDate
       if (patch.completedDate !== undefined) dbPatch.completed_date = patch.completedDate || null
       if (patch.reason !== undefined) dbPatch.reason = patch.reason
+      if (Object.prototype.hasOwnProperty.call(patch, 'paymentDue')) dbPatch.payment_due = patch.paymentDue ?? null
       if (patch.notes !== undefined) dbPatch.notes = patch.notes || null
       if (patch.facilityId !== undefined) dbPatch.facility_id = patch.facilityId || null
       if (patch.assignedTo !== undefined) dbPatch.assigned_to = patch.assignedTo || null

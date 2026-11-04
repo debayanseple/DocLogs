@@ -240,10 +240,12 @@ create table if not exists follow_ups (
   due_date date not null,
   completed_date date,
   reason text not null,
+  payment_due numeric(12,2),
   facility_id uuid references facilities(id) on delete set null,
   assigned_to text,
   status text not null default 'Upcoming' check (status in ('Due','Upcoming','Overdue','Completed','Cancelled','Rescheduled')),
   notes text,
+  constraint follow_ups_payment_due_nonnegative check (payment_due is null or payment_due >= 0),
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );
