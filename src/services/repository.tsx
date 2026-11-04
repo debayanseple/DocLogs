@@ -126,6 +126,7 @@ interface DataContextValue {
   updatePatient: (id: string, patch: Partial<Patient>) => void
   addFacility: (f: Omit<Facility, 'id'>) => Facility
   updateFacility: (id: string, patch: Partial<Facility>) => void
+  removeFacility: (id: string) => Promise<{ error: string | null }>
   /** Rename the workspace after its owner. No-op for non-owners. */
   renameWorkspace: (name: string) => Promise<{ error: string | null }>
   addOpdVisit: (v: Omit<OpdVisit, 'id' | 'createdAt' | 'updatedAt'>) => OpdVisit
@@ -356,7 +357,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
       // Always hydrate from this account's server results, including when all
       // clinical tables are empty. Never carry demo or another user's rows over.
       setData({
-        facilities: facilities.length ? facilities : initialData.facilities,
+        facilities,
         patients,
         opdVisits,
         cancerEpisodes,
@@ -554,6 +555,26 @@ export function DataProvider({ children }: { children: ReactNode }) {
       if (patch.notes !== undefined) dbPatch.notes = patch.notes
       supabase.from('facilities').update(dbPatch as never).eq('id', id).then(({ error }) => { if (error) console.error(error) })
     }
+  }
+  const removeFacility: DataContextValue['removeFacility'] = async (id) => {
+    if (usingSupabase && supabase) {
+      const { error } = await supabase.from('facilities').delete().eq('id', id)
+      if (error) {
+        console.error(error)
+        return { error: friendlySaveError(error.message, 'the facility') }
+      }
+    }
+    setData((prev) => ({
+      ...prev,
+      facilities: prev.facilities.filter((facility) => facility.id !== id),
+      patients: prev.patients.map((patient) => patient.primaryFacilityId === id ? { ...patient, primaryFacilityId: undefined } : patient),
+      opdVisits: prev.opdVisits.map((visit) => visit.facilityId === id ? { ...visit, facilityId: '' } : visit),
+      cancerEpisodes: prev.cancerEpisodes.map((episode) => episode.facilityId === id ? { ...episode, facilityId: undefined } : episode),
+      operations: prev.operations.map((operation) => operation.facilityId === id ? { ...operation, facilityId: '' } : operation),
+      followUps: prev.followUps.map((followUp) => followUp.facilityId === id ? { ...followUp, facilityId: undefined } : followUp),
+      investigations: prev.investigations.map((investigation) => investigation.facilityId === id ? { ...investigation, facilityId: undefined } : investigation),
+    }))
+    return { error: null }
   }
 
   const addOpdVisit: DataContextValue['addOpdVisit'] = (v) => {
@@ -1001,6 +1022,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
     updatePatient,
     addFacility,
     updateFacility,
+    removeFacility,
     renameWorkspace,
     addOpdVisit,
     updateOpdVisit,

@@ -8,12 +8,12 @@ import { StatusBadge } from '../../components/ui/Badge'
 import { exportToCsv } from '../../utils/csv'
 import { useState } from 'react'
 import { Modal } from '../../components/ui/Modal'
-import { ChevronDown, Building2, Plus, Edit2, MapPin, Phone } from 'lucide-react'
+import { ChevronDown, Building2, Plus, Edit2, MapPin, Phone, Trash2 } from 'lucide-react'
 import type { Facility } from '../../types'
 import { SkeletonPage, Skeleton, SkeletonCard } from '../../components/ui/Skeleton'
 
 export function Settings() {
-  const { data, resetDemo, usingSupabase, addFacility, updateFacility, renameWorkspace, ready } = useData()
+  const { data, resetDemo, usingSupabase, addFacility, updateFacility, removeFacility, renameWorkspace, ready } = useData()
   const { role } = useRole()
   const { user, profileName, signOut, updateProfile } = useAuth()
   const [showReset, setShowReset] = useState(false)
@@ -22,6 +22,8 @@ export function Settings() {
   const [showAddFac, setShowAddFac] = useState(false)
   const [editingFac, setEditingFac] = useState<Facility | null>(null)
   const [facForm, setFacForm] = useState<Partial<Facility>>({ name: '', facilityType: 'OPD Centre', address: '', contact: '', status: 'Active', notes: '' })
+  const [deletingFacilityId, setDeletingFacilityId] = useState<string | null>(null)
+  const [facilityDeleteError, setFacilityDeleteError] = useState<string | null>(null)
 
   const displayName = profileName || user?.email?.split('@')[0] || (role === 'Surgeon' ? 'Dr. Arjun Sen' : 'Priya Das')
   const displayEmail = user?.email || (role === 'Surgeon' ? 'arjun.sen@clinicalog.app' : 'priya.das@clinicalog.app')
@@ -126,6 +128,20 @@ export function Settings() {
     if (!facForm.name?.trim() || !facForm.address?.trim()) { alert('Name and address required'); return }
     if (editingFac) { updateFacility(editingFac.id, facForm as Partial<Facility>); setEditingFac(null) }
     else { addFacility({ name: facForm.name!.trim(), facilityType: facForm.facilityType as Facility['facilityType'], address: facForm.address!.trim(), contact: facForm.contact, status: facForm.status as Facility['status'], notes: facForm.notes }); setShowAddFac(false) }
+  }
+  const handleDeleteFacility = async (facility: Facility) => {
+    if (!confirm(`Delete ${facility.name}? Existing records will be kept, but their facility assignment will be removed.`)) return
+    setFacilityDeleteError(null)
+    setDeletingFacilityId(facility.id)
+    const result = await removeFacility(facility.id)
+    setDeletingFacilityId(null)
+    if (result.error) {
+      setFacilityDeleteError(result.error)
+      return
+    }
+    if (facilityPref === facility.id) {
+      setFacilityPref(data.facilities.find((item) => item.id !== facility.id && item.status === 'Active')?.id ?? '')
+    }
   }
 
   if (!ready) {
@@ -309,8 +325,12 @@ export function Settings() {
 
       <Card>
         <CardHeader title="Facilities" subtitle="Hospitals and OPD centres — merged from Facilities menu" action={<Button size="sm" onClick={openAddFac}><Plus className="w-4 h-4" /> Add facility</Button>} />
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-          {data.facilities.map((f) => (
+        {facilityDeleteError && <div role="alert" className="text-sm p-2 mb-3 rounded-lg border border-red-200 bg-red-50 text-red-700">{facilityDeleteError}</div>}
+        {data.facilities.length === 0 ? (
+          <p className="text-sm text-slate-500 py-4">No facilities yet. Add a hospital, clinic, or OPD centre.</p>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+            {data.facilities.map((f) => (
             <div key={f.id} className="glass-subtle rounded-xl p-3">
               <div className="flex items-start justify-between gap-2">
                 <div className="flex gap-2 items-center">
@@ -324,10 +344,16 @@ export function Settings() {
               </div>
               <div className="text-xs text-slate-600 mt-2 flex gap-1.5"><MapPin className="w-3.5 h-3.5 text-slate-400 shrink-0 mt-0.5" /><span>{f.address}</span></div>
               {f.contact && <div className="text-xs text-slate-600 mt-1 flex gap-1.5"><Phone className="w-3.5 h-3.5 text-slate-400 shrink-0" />{f.contact}</div>}
-              <div className="mt-2 flex justify-end"><Button variant="outline" size="sm" onClick={() => openEditFac(f)}><Edit2 className="w-3.5 h-3.5" /> Edit</Button></div>
+              <div className="mt-2 flex justify-end gap-2">
+                <Button variant="outline" size="sm" onClick={() => openEditFac(f)}><Edit2 className="w-3.5 h-3.5" /> Edit</Button>
+                <Button variant="danger" size="sm" disabled={deletingFacilityId !== null} onClick={() => handleDeleteFacility(f)}>
+                  <Trash2 className="w-3.5 h-3.5" /> {deletingFacilityId === f.id ? 'Deleting…' : 'Delete'}
+                </Button>
+              </div>
             </div>
-          ))}
-        </div>
+            ))}
+          </div>
+        )}
       </Card>
 
       {/* Preferences & data at bottom */}
