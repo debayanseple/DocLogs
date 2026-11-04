@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Users, Stethoscope, FileText, Scissors, CalendarClock, AlertTriangle, ArrowRight } from 'lucide-react'
+import { Users, Stethoscope, FileText, Scissors, CalendarClock, AlertTriangle, ArrowRight, Wallet } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import { useData } from '../../services/repository'
 import { Card, CardHeader } from '../../components/ui/Card'
@@ -10,6 +10,9 @@ import { Modal } from '../../components/ui/Modal'
 import { PatientForm } from '../patients/PatientForm'
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts'
 import { SkeletonPage, SkeletonStat, SkeletonCard, Skeleton } from '../../components/ui/Skeleton'
+
+const formatPaymentDue = (amount: number) =>
+  new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 2 }).format(amount)
 
 export function Dashboard() {
   const { data, ready } = useData()
@@ -32,6 +35,10 @@ export function Dashboard() {
 
   const dueFollowUps = data.followUps.filter((f) => f.status === 'Due' || f.status === 'Overdue').length
   const overdue = data.followUps.filter((f) => f.status === 'Overdue').length
+  const paymentFollowUps = data.followUps
+    .filter((followUp) => (followUp.paymentDue ?? 0) > 0)
+    .sort((a, b) => new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime())
+  const totalPaymentDue = paymentFollowUps.reduce((total, followUp) => total + (followUp.paymentDue ?? 0), 0)
 
   // upcoming follow-ups sorted
   const upcoming = [...data.followUps]
@@ -112,7 +119,7 @@ export function Dashboard() {
       </div>
 
       {/* stats */}
-      <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-3 sm:gap-4">
+      <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-7 gap-3 sm:gap-4">
         <Card className="!p-4">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 shrink-0 rounded-xl bg-slate-900 flex items-center justify-center"><Users className="w-5 h-5 text-white" /></div>
@@ -165,6 +172,16 @@ export function Dashboard() {
             <div>
               <div className="text-2xl font-bold text-red-700 leading-none">{overdue}</div>
               <div className="text-xs text-red-600 mt-1">Overdue</div>
+            </div>
+          </div>
+        </Card>
+        <Card className="!p-4">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 shrink-0 rounded-xl bg-emerald-600 flex items-center justify-center"><Wallet className="w-5 h-5 text-white" /></div>
+            <div className="min-w-0">
+              <div className="text-lg font-bold text-slate-900 leading-tight truncate">{formatPaymentDue(totalPaymentDue)}</div>
+              <div className="text-xs text-slate-500 mt-1">Payment due</div>
+              <div className="text-[11px] text-slate-400">{paymentFollowUps.length} follow-ups</div>
             </div>
           </div>
         </Card>
@@ -264,6 +281,28 @@ export function Dashboard() {
           </div>
         </Card>
       </div>
+
+      <Card>
+        <CardHeader title="Payment due" subtitle="Follow-ups with a recorded balance" />
+        {paymentFollowUps.length === 0 ? (
+          <div className="text-sm text-slate-500 py-6 text-center">No payment due recorded</div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6">
+            {paymentFollowUps.slice(0, 6).map((followUp) => {
+              const patient = patientMap.get(followUp.patientId)
+              return (
+                <div key={followUp.id} className="flex items-center justify-between gap-4 py-3 border-b border-slate-100 last:border-b-0">
+                  <div className="min-w-0">
+                    <div className="text-sm font-medium text-slate-900 truncate">{patient?.name ?? 'Unknown patient'}</div>
+                    <div className="text-xs text-slate-500 truncate">{followUp.reason || 'Follow-up'} · {formatDate(followUp.dueDate)}</div>
+                  </div>
+                  <div className="text-sm font-semibold text-slate-900 whitespace-nowrap">{formatPaymentDue(followUp.paymentDue ?? 0)}</div>
+                </div>
+              )
+            })}
+          </div>
+        )}
+      </Card>
 
       <Modal open={showAdd} onClose={() => setShowAdd(false)} title="Add patient">
         <PatientForm onClose={() => setShowAdd(false)} />
