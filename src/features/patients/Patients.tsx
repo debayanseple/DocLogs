@@ -217,7 +217,7 @@ export function Patients() {
         </div>
       </div>
 
-      <Card className="!p-3">
+      <Card className={`!p-3 relative ${menuOpen ? 'z-50' : ''}`}>
         {/* Search on top — full width, compact height */}
         <div className="relative">
           <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400" />
@@ -242,13 +242,14 @@ export function Patients() {
           <div className="relative ml-auto shrink-0" ref={menuRef}>
             <button
               onClick={() => setMenuOpen((v) => !v)}
+              aria-expanded={menuOpen}
               className="h-8 w-8 rounded-xl text-slate-600 hover:bg-white/70 active:bg-white/85 bg-white/45 backdrop-blur-md border border-white/70 flex items-center justify-center"
               aria-label="More actions"
             >
               <MoreVertical className="w-4 h-4" />
             </button>
             {menuOpen && (
-              <div className="glass-strong absolute right-0 mt-1.5 w-52 rounded-2xl py-1.5 z-30">
+              <div className="glass-strong absolute right-0 mt-1.5 w-52 rounded-2xl py-1.5 z-50">
                 <button onClick={handleExport} className="w-full flex items-center gap-2.5 px-3.5 py-2 text-sm text-slate-700 hover:bg-white/60 rounded-xl mx-1">
                   <Download className="w-4 h-4 text-slate-400" /> Export patient list
                 </button>
