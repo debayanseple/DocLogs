@@ -4,7 +4,6 @@ import {
   LayoutDashboard,
   Users,
   CalendarCheck,
-  ChartNoAxesColumn,
   User,
 } from 'lucide-react'
 import { useAuth } from '../../services/auth'
@@ -14,7 +13,6 @@ const navItems = [
   { to: '/', label: 'Home', icon: LayoutDashboard },
   { to: '/patients', label: 'Patients', icon: Users },
   { to: '/follow-ups', label: 'Follow-ups', icon: CalendarCheck },
-  { to: '/reports', label: 'Reports', icon: ChartNoAxesColumn },
   { to: '/profile', label: 'Profile', icon: User },
 ]
 
@@ -113,13 +111,13 @@ export function Layout() {
 
 function SidebarBrand() {
   return (
-    <div className="px-5 py-5 flex items-center gap-3 border-b border-white/10">
-      <div className="w-9 h-9 rounded-xl bg-white/10 backdrop-blur-sm flex items-center justify-center shrink-0">
-        <Activity className="w-5 h-5 text-teal-300" />
+    <div className="px-5 py-5 flex items-center gap-3 border-b border-white/10 text-white">
+      <div className="w-9 h-9 rounded-xl bg-teal-300 flex items-center justify-center shrink-0 shadow-sm shadow-black/10">
+        <Activity className="w-5 h-5 text-[#0f1e3a]" />
       </div>
       <div className="min-w-0">
         <div className="font-bold text-[15px] leading-none">ClinicaLog</div>
-        <div className="text-[11px] tracking-[0.12em] text-white/60 font-semibold">
+        <div className="text-[11px] tracking-[0.12em] text-white/75 font-semibold">
           OMFS
         </div>
       </div>

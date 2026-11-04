@@ -51,13 +51,23 @@ export function Dashboard() {
   const patientMap = new Map(data.patients.map((p) => [p.id, p]))
   const facilityMap = new Map(data.facilities.map((f) => [f.id, f]))
 
-  // charts: OPD visits last 6 months (synthetic)
-  const months = ['Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct']
-  const opdByMonth = months.map((m, idx) => {
-    // generate deterministically from seed
-    const counts: Record<string, number> = { Apr: 8, May: 11, Jun: 9, Jul: 14, Aug: 12, Sep: 16, Oct: 6 + opdThisMonth }
-    return { month: m, visits: counts[m] ?? 5 + idx * 2 }
-  })
+  // Build the chart from this workspace's visits, including the current month.
+  const currentMonth = new Date()
+  const chartMonths = Array.from({ length: 6 }, (_, index) =>
+    new Date(currentMonth.getFullYear(), currentMonth.getMonth() - 5 + index, 1),
+  )
+  const visitsByMonth = new Map<string, number>()
+  for (const visit of data.opdVisits) {
+    // Noon local time avoids shifting a date-only value into an adjacent month.
+    const visitDate = new Date(`${visit.visitDate.slice(0, 10)}T12:00:00`)
+    if (Number.isNaN(visitDate.getTime())) continue
+    const key = `${visitDate.getFullYear()}-${visitDate.getMonth()}`
+    visitsByMonth.set(key, (visitsByMonth.get(key) ?? 0) + 1)
+  }
+  const opdByMonth = chartMonths.map((month) => ({
+    month: month.toLocaleDateString(undefined, { month: 'short' }),
+    visits: visitsByMonth.get(`${month.getFullYear()}-${month.getMonth()}`) ?? 0,
+  }))
 
   const cancerBySite = (() => {
     const agg: Record<string, number> = {}
@@ -163,15 +173,19 @@ export function Dashboard() {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6">
         <Card className="lg:col-span-2">
           <CardHeader title="OPD activity" subtitle="Visits per month (last 6 months)" />
-          <div className="h-[220px]">
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={opdByMonth}>
-                <XAxis dataKey="month" tick={{ fontSize: 12 }} axisLine={false} tickLine={false} />
-                <YAxis tick={{ fontSize: 12 }} axisLine={false} tickLine={false} />
-                <Tooltip />
-                <Bar dataKey="visits" fill="#162a4d" radius={[8, 8, 0, 0]} />
-              </BarChart>
-            </ResponsiveContainer>
+          <div className="h-[220px] flex items-center justify-center">
+            {data.opdVisits.length === 0 ? (
+              <div className="text-sm text-slate-500">No OPD visits yet</div>
+            ) : (
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={opdByMonth}>
+                  <XAxis dataKey="month" tick={{ fontSize: 12 }} axisLine={false} tickLine={false} />
+                  <YAxis allowDecimals={false} tick={{ fontSize: 12 }} axisLine={false} tickLine={false} />
+                  <Tooltip />
+                  <Bar dataKey="visits" fill="#162a4d" radius={[8, 8, 0, 0]} />
+                </BarChart>
+              </ResponsiveContainer>
+            )}
           </div>
         </Card>
 

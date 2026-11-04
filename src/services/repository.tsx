@@ -202,6 +202,9 @@ export function DataProvider({ children }: { children: ReactNode }) {
   const fetchAll = useCallback(async () => {
     if (!usingSupabase || !supabase || !user) return
     setLoading(true)
+    // A signed-in workspace must never inherit rows cached by another account
+    // or by the local demo mode while its own data is loading.
+    setData({ ...initialData, auditEvents: [] })
     try {
       // 1) ensure workspace
       let wsId: string | null = null
@@ -350,23 +353,19 @@ export function DataProvider({ children }: { children: ReactNode }) {
       const investigations = (invRes.data ?? []).map((r) => ({ id: r.id, patientId: r.patient_id, type: r.investigation_type, date: r.date, summary: r.result_summary ?? '', reportReference: r.report_reference ?? undefined, facilityId: r.facility_id ?? undefined, status: r.status, documentId: r.document_id ?? undefined } as Investigation))
       const pathology = (pathRes.data ?? []).map((r) => ({ id: r.id, patientId: r.patient_id, reportDate: r.report_date, specimenSite: r.specimen_site, histology: r.histology, grade: r.grade ?? undefined, labName: r.lab_name ?? undefined, reportId: r.report_id ?? undefined, findings: r.findings ?? undefined, margins: r.margins ?? undefined, pne: r.pne ?? undefined, lve: r.lve ?? undefined, ene: r.ene ?? undefined, nodes: r.nodes ?? undefined, documentId: r.document_id ?? undefined } as PathologyReport))
 
-      // Only replace if we got data; if all empty, keep local seed but with workspace
-      if (patients.length === 0 && facilities.length === 0) {
-        // keep local initial as optimistic, but workspace is set
-        // optionally seed patients? we skip auto-seed to avoid duplicating demo
-      } else {
-        setData({
-          facilities: facilities.length ? facilities : data.facilities,
-          patients,
-          opdVisits,
-          cancerEpisodes,
-          operations,
-          followUps,
-          investigations,
-          pathology,
-          auditEvents,
-        })
-      }
+      // Always hydrate from this account's server results, including when all
+      // clinical tables are empty. Never carry demo or another user's rows over.
+      setData({
+        facilities: facilities.length ? facilities : initialData.facilities,
+        patients,
+        opdVisits,
+        cancerEpisodes,
+        operations,
+        followUps,
+        investigations,
+        pathology,
+        auditEvents,
+      })
     } catch (e) {
       console.error('Failed to load workspace data', e)
     } finally {
