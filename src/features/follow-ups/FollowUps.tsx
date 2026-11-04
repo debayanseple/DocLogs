@@ -15,6 +15,10 @@ import { SkeletonPage, SkeletonToolbar, SkeletonTable, SkeletonList, Skeleton } 
 const formatPaymentDue = (amount?: number) => amount == null
   ? '—'
   : new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 2 }).format(amount)
+const localDateString = () => {
+  const now = new Date()
+  return new Date(now.getTime() - now.getTimezoneOffset() * 60_000).toISOString().slice(0, 10)
+}
 
 export function FollowUps() {
   const { data, updateFollowUp, ready } = useData()
@@ -150,7 +154,7 @@ export function FollowUps() {
                   <td className="px-4 py-3"><StatusBadge status={f.status} /></td>
                   <td className="px-4 py-3">
                     <div className="flex items-center justify-end gap-1">
-                      {f.status !== 'Completed' && f.status !== 'Cancelled' && <button title="Complete" onClick={() => handleAction(f.id, 'Completed', { completedDate: new Date().toISOString().split('T')[0] })} className="p-1.5 rounded-lg hover:bg-emerald-50 active:bg-emerald-100 text-emerald-600 min-w-[32px] min-h-[32px] flex items-center justify-center"><Check className="w-4 h-4" /></button>}
+                      {f.status !== 'Completed' && f.status !== 'Cancelled' && <button title="Complete" onClick={() => handleAction(f.id, 'Completed', { completedDate: localDateString() })} className="p-1.5 rounded-lg hover:bg-emerald-50 active:bg-emerald-100 text-emerald-600 min-w-[32px] min-h-[32px] flex items-center justify-center"><Check className="w-4 h-4" /></button>}
                       {f.status !== 'Cancelled' && f.status !== 'Completed' && <button title="Cancel" onClick={() => handleAction(f.id, 'Cancelled')} className="p-1.5 rounded-lg hover:bg-red-50 active:bg-red-100 text-red-600 min-w-[32px] min-h-[32px] flex items-center justify-center"><X className="w-4 h-4" /></button>}
                       <button onClick={() => setEditing(f.id)} className="p-2 rounded-lg hover:bg-slate-100 active:bg-slate-200 text-slate-500 min-w-[36px] min-h-[36px] flex items-center justify-center"><Edit2 className="w-4 h-4" /></button>
                     </div>
@@ -184,7 +188,7 @@ export function FollowUps() {
               </div>
               <div className="flex items-center gap-1.5 mt-2.5">
                 {f.status !== 'Completed' && f.status !== 'Cancelled' && (
-                  <Button size="sm" variant="outline" onClick={() => handleAction(f.id, 'Completed', { completedDate: new Date().toISOString().split('T')[0] })}>
+                  <Button size="sm" variant="outline" onClick={() => handleAction(f.id, 'Completed', { completedDate: localDateString() })}>
                     <Check className="w-3.5 h-3.5" /> Complete
                   </Button>
                 )}

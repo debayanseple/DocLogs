@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Users, Stethoscope, FileText, Scissors, CalendarClock, AlertTriangle, ArrowRight, Wallet } from 'lucide-react'
+import { Users, Stethoscope, FileText, Scissors, CalendarClock, AlertTriangle, ArrowRight, Wallet, TrendingUp } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import { useData } from '../../services/repository'
 import { Card, CardHeader } from '../../components/ui/Card'
@@ -19,26 +19,20 @@ export function Dashboard() {
   const [showAdd, setShowAdd] = useState(false)
 
   const totalPatients = data.patients.length
-  const opdThisMonth = data.opdVisits.filter((v) => {
-    const d = new Date(v.visitDate)
-    const now = new Date()
-    return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear()
-  }).length
-  const activeCancer = data.cancerEpisodes.filter((c) => c.status !== 'Finalised').length
-  // also count total
-  const cancerTotal = data.cancerEpisodes.length
-  const opsThisMonth = data.operations.filter((o) => {
-    const d = new Date(o.operationDate)
-    const now = new Date()
-    return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear()
-  }).length
-
   const dueFollowUps = data.followUps.filter((f) => f.status === 'Due' || f.status === 'Overdue').length
   const overdue = data.followUps.filter((f) => f.status === 'Overdue').length
+  const now = new Date()
   const paymentFollowUps = data.followUps
     .filter((followUp) => followUp.status !== 'Completed' && (followUp.paymentDue ?? 0) > 0)
     .sort((a, b) => new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime())
   const totalPaymentDue = paymentFollowUps.reduce((total, followUp) => total + (followUp.paymentDue ?? 0), 0)
+  const completedPaymentsThisMonth = data.followUps.filter((followUp) => {
+    if (followUp.status !== 'Completed' || !followUp.completedDate || (followUp.paymentDue ?? 0) <= 0) return false
+    const completedDate = new Date(`${followUp.completedDate.slice(0, 10)}T12:00:00`)
+    return !Number.isNaN(completedDate.getTime()) &&
+      completedDate.getMonth() === now.getMonth() && completedDate.getFullYear() === now.getFullYear()
+  })
+  const earningsThisMonth = completedPaymentsThisMonth.reduce((total, followUp) => total + (followUp.paymentDue ?? 0), 0)
 
   // upcoming follow-ups sorted
   const upcoming = [...data.followUps]
@@ -59,7 +53,7 @@ export function Dashboard() {
   const facilityMap = new Map(data.facilities.map((f) => [f.id, f]))
 
   // Build the chart from this workspace's visits, including the current month.
-  const currentMonth = new Date()
+  const currentMonth = now
   const chartMonths = Array.from({ length: 6 }, (_, index) =>
     new Date(currentMonth.getFullYear(), currentMonth.getMonth() - 5 + index, 1),
   )
@@ -92,8 +86,8 @@ export function Dashboard() {
               <Skeleton key={i} className="h-11 w-32 rounded-xl" />
             ))}
           </div>
-          <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-3 sm:gap-4">
-            {Array.from({ length: 6 }).map((_, i) => (
+          <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-3 sm:gap-4">
+            {Array.from({ length: 5 }).map((_, i) => (
               <SkeletonStat key={i} />
             ))}
           </div>
@@ -119,41 +113,13 @@ export function Dashboard() {
       </div>
 
       {/* stats */}
-      <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-7 gap-3 sm:gap-4">
+      <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-3 sm:gap-4">
         <Card className="!p-4">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 shrink-0 rounded-xl bg-slate-900 flex items-center justify-center"><Users className="w-5 h-5 text-white" /></div>
             <div>
               <div className="text-2xl font-bold text-slate-900 leading-none">{totalPatients}</div>
               <div className="text-xs text-slate-500 mt-1">Total patients</div>
-            </div>
-          </div>
-        </Card>
-        <Card className="!p-4">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 shrink-0 rounded-xl bg-teal-600 flex items-center justify-center"><Stethoscope className="w-5 h-5 text-white" /></div>
-            <div>
-              <div className="text-2xl font-bold text-slate-900 leading-none">{opdThisMonth}</div>
-              <div className="text-xs text-slate-500 mt-1">OPD this month</div>
-            </div>
-          </div>
-        </Card>
-        <Card className="!p-4">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 shrink-0 rounded-xl bg-blue-600 flex items-center justify-center"><FileText className="w-5 h-5 text-white" /></div>
-            <div>
-              <div className="text-2xl font-bold text-slate-900 leading-none">{cancerTotal}</div>
-              <div className="text-xs text-slate-500 mt-1">{activeCancer} active</div>
-              <div className="text-[11px] text-slate-400">Cancer registry</div>
-            </div>
-          </div>
-        </Card>
-        <Card className="!p-4">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 shrink-0 rounded-xl bg-indigo-600 flex items-center justify-center"><Scissors className="w-5 h-5 text-white" /></div>
-            <div>
-              <div className="text-2xl font-bold text-slate-900 leading-none">{opsThisMonth}</div>
-              <div className="text-xs text-slate-500 mt-1">Operations this month</div>
             </div>
           </div>
         </Card>
@@ -182,6 +148,16 @@ export function Dashboard() {
               <div className="text-lg font-bold text-slate-900 leading-tight truncate">{formatPaymentDue(totalPaymentDue)}</div>
               <div className="text-xs text-slate-500 mt-1">Outstanding due</div>
               <div className="text-[11px] text-slate-400">{paymentFollowUps.length} follow-ups</div>
+            </div>
+          </div>
+        </Card>
+        <Card className="!p-4">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 shrink-0 rounded-xl bg-teal-600 flex items-center justify-center"><TrendingUp className="w-5 h-5 text-white" /></div>
+            <div className="min-w-0">
+              <div className="text-lg font-bold text-slate-900 leading-tight truncate">{formatPaymentDue(earningsThisMonth)}</div>
+              <div className="text-xs text-slate-500 mt-1">Earnings this month</div>
+              <div className="text-[11px] text-slate-400">{completedPaymentsThisMonth.length} payments received</div>
             </div>
           </div>
         </Card>
