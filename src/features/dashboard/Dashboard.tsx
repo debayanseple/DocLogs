@@ -36,7 +36,7 @@ export function Dashboard() {
   const dueFollowUps = data.followUps.filter((f) => f.status === 'Due' || f.status === 'Overdue').length
   const overdue = data.followUps.filter((f) => f.status === 'Overdue').length
   const paymentFollowUps = data.followUps
-    .filter((followUp) => (followUp.paymentDue ?? 0) > 0)
+    .filter((followUp) => followUp.status !== 'Completed' && (followUp.paymentDue ?? 0) > 0)
     .sort((a, b) => new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime())
   const totalPaymentDue = paymentFollowUps.reduce((total, followUp) => total + (followUp.paymentDue ?? 0), 0)
 
@@ -180,7 +180,7 @@ export function Dashboard() {
             <div className="w-10 h-10 shrink-0 rounded-xl bg-emerald-600 flex items-center justify-center"><Wallet className="w-5 h-5 text-white" /></div>
             <div className="min-w-0">
               <div className="text-lg font-bold text-slate-900 leading-tight truncate">{formatPaymentDue(totalPaymentDue)}</div>
-              <div className="text-xs text-slate-500 mt-1">Payment due</div>
+              <div className="text-xs text-slate-500 mt-1">Outstanding due</div>
               <div className="text-[11px] text-slate-400">{paymentFollowUps.length} follow-ups</div>
             </div>
           </div>
@@ -283,9 +283,9 @@ export function Dashboard() {
       </div>
 
       <Card>
-        <CardHeader title="Payment due" subtitle="Follow-ups with a recorded balance" />
+        <CardHeader title="Outstanding payments" subtitle="Recorded balances on open follow-ups" />
         {paymentFollowUps.length === 0 ? (
-          <div className="text-sm text-slate-500 py-6 text-center">No payment due recorded</div>
+          <div className="text-sm text-slate-500 py-6 text-center">No outstanding payment due</div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6">
             {paymentFollowUps.slice(0, 6).map((followUp) => {

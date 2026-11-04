@@ -414,7 +414,7 @@ export function PatientDetails() {
                 <div className="min-w-0">
                   <div className="text-sm font-medium">
                     {fu.reason || 'Follow-up'}
-                    {fu.paymentDue != null && ` · Payment due ₹${fu.paymentDue.toLocaleString('en-IN', { maximumFractionDigits: 2 })}`}
+                    {fu.paymentDue != null && ` · Payment ${fu.status === 'Completed' ? 'cleared' : 'due'} ₹${fu.paymentDue.toLocaleString('en-IN', { maximumFractionDigits: 2 })}`}
                     {' · '}{formatDate(fu.dueDate)}
                   </div>
                   <div className="text-xs text-slate-500">{facilityMap.get(fu.facilityId ?? '')?.name ?? '—'} · {fu.assignedTo ?? '—'}</div>

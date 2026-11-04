@@ -43,13 +43,16 @@ export function FollowUps() {
   }, [data.followUps, tab, facility, q, patientMap])
 
   const handleAction = (id: string, status: string, extra?: Partial<Record<string, string>>) => {
-    if (!confirm(`Change status to ${status}?`)) return
+    const confirmation = status === 'Completed'
+      ? 'Mark this follow-up complete? Any recorded payment due will be marked as received.'
+      : `Change status to ${status}?`
+    if (!confirm(confirmation)) return
     updateFollowUp(id, { status: status as never, ...extra, updatedAt: new Date().toISOString() } as never)
   }
 
   const handleExport = () => {
-    const rows = filtered.map((f) => [f.id.slice(0, 8), patientMap.get(f.patientId)?.patientNumber ?? '', patientMap.get(f.patientId)?.name ?? '', f.reason, f.paymentDue ?? '', formatDate(f.dueDate), facilityMap.get(f.facilityId ?? '')?.name ?? '', f.assignedTo ?? '', f.status])
-    exportToCsv(`followups-${new Date().toISOString().slice(0, 10)}.csv`, ['ID', 'Patient ID', 'Patient', 'Reason', 'Payment due (INR)', 'Due date', 'Facility', 'Assigned', 'Status'], rows)
+    const rows = filtered.map((f) => [f.id.slice(0, 8), patientMap.get(f.patientId)?.patientNumber ?? '', patientMap.get(f.patientId)?.name ?? '', f.reason, f.paymentDue ?? '', f.paymentDue == null ? 'Not recorded' : f.status === 'Completed' ? 'Cleared' : 'Due', formatDate(f.dueDate), facilityMap.get(f.facilityId ?? '')?.name ?? '', f.assignedTo ?? '', f.status])
+    exportToCsv(`followups-${new Date().toISOString().slice(0, 10)}.csv`, ['ID', 'Patient ID', 'Patient', 'Reason', 'Payment amount (INR)', 'Payment status', 'Due date', 'Facility', 'Assigned', 'Status'], rows)
   }
 
   const counts = {
@@ -110,6 +113,7 @@ export function FollowUps() {
           </button>
         ))}
       </div>
+      <p className="text-xs text-slate-500">Marking a follow-up Completed also marks its recorded payment due as received.</p>
 
       <Card padding={false} className="overflow-hidden">
         <div className="hidden md:block overflow-x-auto">
@@ -134,7 +138,9 @@ export function FollowUps() {
                     <div className="text-xs text-slate-500 font-mono">{patientMap.get(f.patientId)?.patientNumber}</div>
                   </td>
                   <td className="px-4 py-3 max-w-[260px] truncate" title={f.reason}>{f.reason || '—'}</td>
-                  <td className="px-4 py-3 whitespace-nowrap">{formatPaymentDue(f.paymentDue)}</td>
+                  <td className="px-4 py-3 whitespace-nowrap">
+                    {f.status === 'Completed' && f.paymentDue != null ? `Cleared · ${formatPaymentDue(f.paymentDue)}` : formatPaymentDue(f.paymentDue)}
+                  </td>
                   <td className="px-4 py-3 whitespace-nowrap">
                     <span className="inline-flex items-center gap-1"><Calendar className="w-3.5 h-3.5 text-slate-400" />{formatDate(f.dueDate)}</span>
                     {f.completedDate && <span className="text-xs text-slate-500 ml-2">Done {formatDate(f.completedDate)}</span>}
@@ -169,7 +175,7 @@ export function FollowUps() {
                 <StatusBadge status={f.status} />
               </div>
               {f.reason && <div className="text-sm text-slate-700 mt-1.5">{f.reason}</div>}
-              {f.paymentDue != null && <div className="text-sm text-slate-700 mt-1.5">Payment due: {formatPaymentDue(f.paymentDue)}</div>}
+              {f.paymentDue != null && <div className="text-sm text-slate-700 mt-1.5">{f.status === 'Completed' ? 'Payment cleared' : 'Payment due'}: {formatPaymentDue(f.paymentDue)}</div>}
               <div className="text-xs text-slate-500 mt-1 flex flex-wrap items-center gap-x-2">
                 <span className="inline-flex items-center gap-1">
                   <Calendar className="w-3.5 h-3.5" /> {formatDate(f.dueDate)}
